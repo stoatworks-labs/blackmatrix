@@ -4,6 +4,8 @@ import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { useFleet } from './useFleet';
+import { useIsMobile } from './useIsMobile';
+import { MobileRouter } from './components/MobileRouter';
 import { useTakeState, type UndoEntry } from './takeState';
 import { useSimulatorFleet } from './simulator/useSimulatorFleet';
 import type { Destination } from './types';
@@ -56,7 +58,20 @@ export function App() {
     };
   }, [view]);
 
+  const isMobile = useIsMobile();
   const take = useTakeState(api.snapshot);
+
+  // Preset is the default on a phone, once. A mis-tap on a touch screen in live
+  // mode is a crosspoint on air; staging makes a wrong tap cost nothing. Set
+  // once rather than on every resize, so choosing Live is not undone underneath
+  // the operator.
+  const presetDefaulted = useRef(false);
+  useEffect(() => {
+    if (isMobile && !presetDefaulted.current) {
+      presetDefaulted.current = true;
+      take.setMode('preset');
+    }
+  }, [isMobile, take]);
 
   /**
    * A crosspoint click. In live mode it goes now; in preset mode it joins the
@@ -172,7 +187,7 @@ export function App() {
           ))}
           {devices.length === 0 ? <span className="none">No devices yet</span> : null}
         </nav>
-        {view === 'matrix' ? (
+        {view === 'matrix' && !isMobile ? (
           <div className={`take-bar ${take.mode}`}>
             <div className="mode-switch" role="group" aria-label="Routing mode">
               <button
@@ -260,7 +275,23 @@ export function App() {
       ) : null}
 
       <main>
-        {view === 'sources' ? (
+        {view === 'matrix' && isMobile ? (
+          <MobileRouter
+            devices={devices}
+            device={device}
+            onSelectDevice={setSelectedId}
+            mode={take.mode}
+            onSetMode={take.setMode}
+            staged={take.staged}
+            stagedCount={take.stagedList.length}
+            undoDepth={take.undoDepth}
+            onRoute={onRoute}
+            onUnstage={(destination) => device && take.unstage(device.id, destination)}
+            onTake={() => void onTake()}
+            onClear={take.clear}
+            onUndo={() => void onUndo()}
+          />
+        ) : view === 'sources' ? (
           <SourcesPage
             device={device}
             onSetPort={async (input, port) => {
@@ -304,7 +335,7 @@ export function App() {
           </div>
         )}
 
-        {view === 'matrix' ? (
+        {view === 'matrix' && !isMobile ? (
           <SalvoPanel
           salvos={api.snapshot?.salvos ?? []}
           devices={devices}

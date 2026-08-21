@@ -1,70 +1,31 @@
-/** Mirrors the server's snapshot shape. Kept hand-written so the UI has no build-order dependency. */
+/**
+ * The shapes the UI works with.
+ *
+ * The matrix model — destinations, sources, sections, port assignments and the
+ * labels for them — is re-exported from @av/atem-matrix rather than restated
+ * here. It used to be restated, and the copies drifted: the web kept a version
+ * of the aux legality rule from before a real switcher corrected it, so the grid
+ * offered crosspoints the server then refused. One definition, imported.
+ *
+ * What is declared below is only what the *server* shapes: its snapshot, its
+ * device view, and the forms the UI posts back.
+ */
+// Imported as well as re-exported: `export type { X } from` forwards the name
+// without binding it locally, and DeviceView below needs to refer to it.
+import type { MatrixModel } from '@av/atem-matrix';
 
-/** Declared by the device — an ATEM's five, a Videohub's outputs/monitoring. */
-export type SectionId = string;
-
-export interface Section {
-  id: SectionId;
-  label: string;
-  hint: string;
-}
-
-export interface Destination {
-  id: string;
-  kind: string;
-  /** 'any' for a plain router crosspoint; absent means the ATEM mask rules. */
-  accepts?: 'atem' | 'any';
-  section: SectionId;
-  label: string;
-  short: string;
-  address: { unit: number; slot?: number };
-  caveat?: string;
-}
-
-export interface SourcePorts {
-  current: number;
-  available: number[];
-}
-
-export interface Source {
-  id: number;
-  label: string;
-  short: string;
-  kind: string;
-  availability: number;
-  meAvailability: number;
-  /** Only on external inputs, and only on devices that have plugs at all. */
-  ports?: SourcePorts;
-}
-
-/** ExternalPortType, named. The switcher sends the number. */
-export const PORT_LABELS: Record<number, string> = {
-  0: 'Unknown',
-  1: 'SDI',
-  2: 'HDMI',
-  4: 'Component',
-  8: 'Composite',
-  16: 'S-Video',
-  32: 'XLR',
-  64: 'AES/EBU',
-  128: 'RCA',
-  256: 'Internal',
-  512: 'TS jack',
-  1024: 'MADI',
-  2048: 'TRS jack',
-  4096: 'Network',
-};
-
-export function portLabel(port: number): string {
-  return PORT_LABELS[port] ?? `Port ${port}`;
-}
-
-export interface MatrixModel {
-  sections: Section[];
-  sources: Source[];
-  destinations: Destination[];
-  routes: Record<string, number>;
-}
+export type {
+  Acceptance,
+  Destination,
+  DestinationKind,
+  MatrixModel,
+  Section,
+  SectionId,
+  Source,
+  SourceKind,
+  SourcePorts,
+} from '@av/atem-matrix';
+export { PORT_LABELS, portLabel } from '@av/atem-matrix';
 
 export interface DeviceView {
   id: string;

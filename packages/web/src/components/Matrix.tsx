@@ -1,5 +1,5 @@
 import { Fragment, memo, useMemo, useState } from 'react';
-import { isLegal } from '../availability';
+import { isLegal } from '@av/atem-matrix';
 import { groupSources, type GroupedSources } from '../sourceGroups';
 import { useViewState } from '../useViewState';
 import type { Crosspoint, RouteMode } from '../takeState';

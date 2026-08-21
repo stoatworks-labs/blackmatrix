@@ -632,3 +632,182 @@ main > .empty code { color: var(--routed); }
   cursor: pointer;
 }
 .rowhead-staged .arrow { color: var(--dim); }
+
+/* ---- the phone layout -------------------------------------------------- */
+
+.mobile { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+.mobile-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.mobile-device {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.mobile-mode { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.mobile-mode button {
+  padding: 0 14px;
+  background: transparent;
+  border: 0;
+  color: var(--dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.mobile-mode button.on.live { background: #16261a; color: var(--ok); }
+.mobile-mode button.on.preset { background: #2a2413; color: var(--routed); }
+
+.mobile-list { flex: 1; overflow-y: auto; margin: 0; padding: 0 0 8px; list-style: none; }
+.mobile-list ol { margin: 0; padding: 0; list-style: none; }
+
+.mobile-section > span {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px 12px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mobile-section li { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+
+/* 56px rows: a touch target you can hit without looking, which is the
+   situation this view exists for. */
+.mobile-dest, .mobile-source {
+  flex: 1;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 13px;
+  background: var(--bg);
+  border: 0;
+  border-left: 3px solid transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.mobile-dest:active, .mobile-source:active { background: var(--panel-2); }
+.mobile-dest.staged { border-left-color: var(--routed); }
+.mobile-dest.locked { border-left-color: var(--onair); }
+
+.mobile-dest-name { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.mobile-dest-source { font-size: 12px; color: var(--dim); }
+.mobile-staged { color: var(--routed); }
+.mobile-dest-source .arrow { color: var(--line-strong, var(--dim)); }
+.mobile-lock {
+  padding: 1px 6px;
+  border: 1px solid var(--onair);
+  border-radius: 8px;
+  color: var(--onair);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mobile-drop {
+  width: 52px;
+  background: var(--panel);
+  border: 0;
+  border-left: 1px solid var(--line);
+  color: var(--routed);
+  font-size: 20px;
+}
+
+.mobile-source { flex-direction: row; align-items: center; justify-content: space-between; }
+.mobile-source.live { border-left-color: var(--routed); }
+.mobile-source.staged { border-left-color: var(--routed); background: #1a1710; }
+.tag {
+  padding: 2px 7px;
+  border-radius: 9px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.tag.on-air { background: var(--routed); color: #1a1206; font-weight: 700; }
+.tag.pending { border: 1px solid var(--routed); color: var(--routed); }
+
+.mobile-picker { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.mobile-picker-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.mobile-picker-head div { display: flex; flex-direction: column; min-width: 0; }
+.mobile-picker-head strong { font-size: 14px; }
+.mobile-picker-head span { color: var(--dim); font-size: 11px; }
+.mobile-back {
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Bottom, because that is where a thumb is. */
+.mobile-take {
+  display: flex;
+  gap: 8px;
+  padding: 9px 10px calc(9px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.mobile-take.preset { border-top-color: var(--routed); }
+.mobile-take button {
+  flex: 1;
+  min-height: 46px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.mobile-take button:disabled { opacity: 0.35; }
+.mobile-take .mobile-take-go { flex: 1.6; }
+.mobile-take .mobile-take-go:not(:disabled) {
+  background: var(--routed);
+  border-color: var(--routed);
+  color: #1a1206;
+  font-weight: 700;
+}
+
+.mobile-empty { padding: 40px 20px; text-align: center; color: var(--dim); }
+
+/* The rest of the app at phone width. */
+@media (max-width: 800px) {
+  .topbar { flex-wrap: wrap; gap: 10px; padding: 8px 10px; }
+  .brand h1 { font-size: 13px; }
+  .devices { display: none; }
+  .view-tabs { margin-left: auto; }
+  .view-toggle { padding: 8px 10px; font-size: 10px; }
+  .devices-page { padding: 12px 12px 32px; }
+  .device-list li, .found-list li { flex-direction: column; align-items: stretch; gap: 10px; }
+  .device-state { align-items: flex-start; min-width: 0; }
+  .device-form { grid-template-columns: 1fr; }
+  .port-choice { flex-wrap: wrap; }
+}
