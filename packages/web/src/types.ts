@@ -71,6 +71,7 @@ export interface DeviceView {
   name: string;
   address: string;
   model: string;
+  expectedModel?: string;
   connection: string;
   videohubPort: number | null;
   videohubClients: number;
@@ -100,12 +101,15 @@ export interface DiscoverResult {
 
 /** The editable half of a device — what the devices page sends back. */
 export interface DeviceInput {
-  id: string;
+  /** Optional: the server makes one from the name or address when absent. */
+  id?: string;
   name: string;
   address: string;
   type?: 'atem' | 'videohub';
   videohubPort?: number;
   capture?: string;
+  /** Empty means auto-detect: take whatever the device reports. */
+  expectedModel?: string;
 }
 
 export interface FleetSnapshot {

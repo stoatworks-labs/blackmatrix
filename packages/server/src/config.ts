@@ -23,6 +23,13 @@ export interface DeviceConfig {
    * developing against a real switcher's exact shape once it has gone.
    */
   capture?: string;
+  /**
+   * What the operator expected this to be, chosen when adding it. Purely a
+   * label and a check: the device reports its own model on connecting, and a
+   * mismatch is surfaced rather than hidden — usually it means a typo'd address
+   * reached a different box.
+   */
+  expectedModel?: string;
 }
 
 export interface Salvo {

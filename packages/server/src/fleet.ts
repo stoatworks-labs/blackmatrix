@@ -14,6 +14,8 @@ export interface DeviceView {
   name: string;
   address: string;
   model: string;
+  /** What was chosen when it was added, when anything was. */
+  expectedModel?: string;
   connection: string;
   videohubPort: number | null;
   videohubClients: number;
@@ -141,6 +143,22 @@ export class Fleet extends EventEmitter {
 
   /** Add a device at runtime. The config file is updated, and it connects now. */
   async addDevice(deviceConfig: DeviceConfig): Promise<RouteResult> {
+    // A name is a nicety, not a requirement: an address identifies a device
+    // perfectly well, and refusing to add one for want of a label is friction
+    // over something the app can work out for itself.
+    if (!deviceConfig.name?.trim()) {
+      deviceConfig.name = deviceConfig.expectedModel?.trim() || deviceConfig.address.trim() || 'Device';
+    }
+
+    // An id is ours to make, not something to ask an operator for. It exists so
+    // salvos, ties and labels have something stable to point at; the person
+    // adding a switcher is thinking about an address and a name.
+    if (!deviceConfig.id) {
+      deviceConfig.id = uniqueId(
+        deviceConfig.name || deviceConfig.address || (deviceConfig.type ?? 'device'),
+        this.config.devices,
+      );
+    }
     const problem = validateDevice(deviceConfig, this.config.devices);
     if (problem) return { ok: false, reason: problem };
 
@@ -301,6 +319,7 @@ export class Fleet extends EventEmitter {
         name: entry.config.name,
         address: entry.config.address,
         model: entry.runner.model,
+        expectedModel: entry.config.expectedModel,
         connection: entry.runner.connection,
         videohubPort: entry.videohub?.port ?? null,
         videohubClients: entry.videohub?.clientCount ?? 0,
@@ -535,6 +554,21 @@ function buildRunner(config: DeviceConfig, index: number, mock: boolean): Routab
   if (mock) return new AtemRoutable(new MockDevice(config, index));
   if (config.capture) return new AtemRoutable(ReplayDevice.fromFile(config, config.capture));
   return new AtemRoutable(new RealDevice(config));
+}
+
+/** A readable, stable id from whatever the operator typed. */
+function uniqueId(seed: string, existing: DeviceConfig[]): string {
+  const base =
+    seed
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 24) || 'device';
+  if (!existing.some((device) => device.id === base)) return base;
+  for (let suffix = 2; ; suffix++) {
+    const candidate = `${base}-${suffix}`;
+    if (!existing.some((device) => device.id === candidate)) return candidate;
+  }
 }
 
 /** Everything that would make a device unusable, checked before it is accepted. */

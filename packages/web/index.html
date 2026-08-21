@@ -8,5 +8,20 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!--
+      The shared Stoatworks support footer. Classic and deferred on purpose, not
+      a module: it reads its configuration off document.currentScript, which is
+      null in a module.
+
+      Vendored from stoatworks-backend/support-footer — never edited here.
+    -->
+    <script
+      src="/support-footer.js"
+      defer
+      data-app="BlackMatrix"
+      data-repo="https://github.com/stoatworks-labs/blackmatrix"
+      data-version="0.1.0"
+      data-note="A router matrix across a fleet of Blackmagic switchers and routers, with Videohub protocol emulation so hardware panels drive it."
+    ></script>
   </body>
 </html>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Local network access.
+
+    Since macOS 15 an app must declare why it talks to the local network, and
+    from 26 the enforcement is thorough: without this key a GUI-launched app is
+    denied LAN traffic SILENTLY. No error, no prompt — sockets simply never
+    reach anything. Every symptom looks like the switcher being absent.
+
+    It does not show up in development because a process started from Terminal
+    inherits Terminal's own permission. The app only fails once it is
+    double-clicked, which is to say only for the people using it.
+
+    This app is nothing but local network traffic: the ATEM protocol on UDP
+    9910, the Videohub protocol on TCP 9990, and a sweep of the local /24s to
+    find them.
+  -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>BlackMatrix finds and controls Blackmagic switchers and routers on your local network.</string>
+</dict>
+</plist>

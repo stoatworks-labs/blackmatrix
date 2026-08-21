@@ -13,7 +13,7 @@ interface DevicesPageProps {
   onDiscover: () => Promise<DiscoverResult>;
 }
 
-const BLANK: DeviceInput = { id: '', name: '', address: '', type: 'atem' };
+const BLANK: DeviceInput = { name: '', address: '', type: 'atem', expectedModel: '' };
 
 /**
  * Everything about a device that is not a crosspoint.
@@ -50,8 +50,7 @@ export function DevicesPage({
   const adopt = (found: FoundDevice, as: 'atem' | 'videohub'): void => {
     setAdding(true);
     setPrefill({
-      id: suggestId(found, as),
-      name: as === 'videohub' ? 'Router' : 'Switcher',
+      name: '',
       address: found.address,
       type: as,
     });
@@ -113,8 +112,8 @@ export function DevicesPage({
                     id: device.id,
                     name: device.name,
                     address: device.address,
-                    type: device.address.startsWith('replay://') ? 'atem' : undefined,
                     videohubPort: device.videohubPort ?? undefined,
+                    expectedModel: device.expectedModel ?? '',
                   }}
                   onCancel={() => setEditing(null)}
                   onSave={async (device_) => {
@@ -122,6 +121,7 @@ export function DevicesPage({
                       name: device_.name,
                       address: device_.address,
                       videohubPort: device_.videohubPort,
+                      expectedModel: device_.expectedModel,
                     });
                     setEditing(null);
                   }}
@@ -130,7 +130,14 @@ export function DevicesPage({
                 <>
                   <div className="device-main">
                     <strong>{device.name}</strong>
-                    <span className="device-model">{device.model}</span>
+                    <span className="device-model">
+                      {device.model}
+                      {device.expectedModel && device.connection === 'connected' && !device.model.includes(device.expectedModel) ? (
+                        <span className="mismatch" title={`You added this as ${device.expectedModel}`}>
+                          expected {device.expectedModel}
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="device-meta">
                       <code>{device.id}</code> · {device.address || 'no address'} ·{' '}
                       {device.videohubPort ? `videohub :${device.videohubPort}` : 'no videohub port'}
@@ -179,6 +186,9 @@ export function DevicesPage({
           ) : null}
         </ul>
       </section>
+
+      {/* Where the shared support footer is moved to. See App.tsx. */}
+      <div id="support-slot" />
 
       {scan ? (
         <section>
@@ -234,6 +244,130 @@ export function DevicesPage({
  * a specification — and the one entry that *was* read off hardware should be
  * distinguishable from the ones that were not.
  */
+interface DeviceFormProps {
+  initial: DeviceInput;
+  isNew?: boolean;
+  onSave: (device: DeviceInput) => Promise<void>;
+  onCancel: () => void;
+}
+
+/**
+ * Adding a device asks for what someone actually knows: where it is, what kind
+ * of thing it is, and optionally which model.
+ *
+ * There is no id field. An id exists so salvos, ties and labels have something
+ * stable to point at, which is the app's problem and not the operator's — the
+ * server makes one from the name or the address.
+ *
+ * Model defaults to auto-detect because the device reports its own on
+ * connecting, and that answer is better than anything a list can offer. Picking
+ * one is a statement of what you expect to find, and a mismatch gets surfaced
+ * rather than hidden: usually it means the address reached a different box.
+ */
+function DeviceForm({ initial, isNew, onSave, onCancel }: DeviceFormProps) {
+  const [device, setDevice] = useState<DeviceInput>(initial);
+  const [busy, setBusy] = useState(false);
+
+  const set = (patch: Partial<DeviceInput>): void => setDevice((current) => ({ ...current, ...patch }));
+  const kind = device.type ?? 'atem';
+  const models = CATALOGUE.filter((entry) => entry.kind === kind);
+
+  return (
+    <form
+      className="device-form"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setBusy(true);
+        try {
+          await onSave({
+            ...device,
+            name: device.name.trim() || device.expectedModel || device.address.trim(),
+            address: device.address.trim(),
+          });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <label>
+        <span>Address</span>
+        <input
+          value={device.address}
+          onChange={(event) => set({ address: event.target.value })}
+          placeholder={kind === 'videohub' ? '192.168.1.60' : '192.168.1.14'}
+          required
+          autoFocus={isNew}
+        />
+        <small>{kind === 'videohub' ? 'Add :9990 only if the router uses another port.' : 'The switcher’s IP address.'}</small>
+      </label>
+
+      <label>
+        <span>Type</span>
+        <select
+          value={kind}
+          onChange={(event) => set({ type: event.target.value as 'atem' | 'videohub', expectedModel: '' })}
+          disabled={!isNew}
+        >
+          <option value="atem">ATEM switcher</option>
+          <option value="videohub">Blackmagic Videohub</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Model</span>
+        <select value={device.expectedModel ?? ''} onChange={(event) => set({ expectedModel: event.target.value })}>
+          <option value="">Auto-detect (recommended)</option>
+          {models.map((entry) => (
+            <option key={entry.id} value={entry.name}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
+        <small>
+          The device reports its own model when it connects. Choosing one here says what you expect, and a mismatch
+          is flagged.
+        </small>
+      </label>
+
+      <label>
+        <span>Name</span>
+        <input
+          value={device.name}
+          onChange={(event) => set({ name: event.target.value })}
+          placeholder={device.expectedModel || 'Stage, Studio, Machine room…'}
+        />
+        <small>Optional — what you call it. Defaults to the model or the address.</small>
+      </label>
+
+      <label>
+        <span>Panel port</span>
+        <input
+          type="number"
+          value={device.videohubPort ?? ''}
+          onChange={(event) => set({ videohubPort: event.target.value ? Number(event.target.value) : undefined })}
+          placeholder="auto"
+          min={1}
+          max={65535}
+        />
+        <small>
+          {kind === 'videohub'
+            ? 'A router already speaks this protocol — leave empty unless you want this app’s view served in front of it.'
+            : 'Where a router panel connects to route this switcher. Empty picks the next free port.'}
+        </small>
+      </label>
+
+      <div className="device-form-actions">
+        <button type="submit" className="primary" disabled={busy}>
+          {isNew ? 'Add' : 'Save'}
+        </button>
+        <button type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function CatalogueForm({
   onAdd,
   onCancel,
@@ -280,104 +414,6 @@ function CatalogueForm({
       <div className="device-form-actions">
         <button type="submit" className="primary">
           Add
-        </button>
-        <button type="button" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function suggestId(found: FoundDevice, as: 'atem' | 'videohub'): string {
-  return `${as === 'videohub' ? 'hub' : 'atem'}-${found.address.split('.').pop()}`;
-}
-
-interface DeviceFormProps {
-  initial: DeviceInput;
-  isNew?: boolean;
-  onSave: (device: DeviceInput) => Promise<void>;
-  onCancel: () => void;
-}
-
-function DeviceForm({ initial, isNew, onSave, onCancel }: DeviceFormProps) {
-  const [device, setDevice] = useState<DeviceInput>(initial);
-  const [busy, setBusy] = useState(false);
-
-  const set = (patch: Partial<DeviceInput>): void => setDevice((current) => ({ ...current, ...patch }));
-
-  return (
-    <form
-      className="device-form"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        try {
-          await onSave({ ...device, id: device.id.trim(), name: device.name.trim(), address: device.address.trim() });
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <label>
-        <span>Name</span>
-        <input value={device.name} onChange={(event) => set({ name: event.target.value })} required />
-      </label>
-      <label>
-        <span>Id</span>
-        <input
-          value={device.id}
-          onChange={(event) => set({ id: event.target.value })}
-          disabled={!isNew}
-          required
-          pattern="[a-zA-Z0-9_-]+"
-          title={
-            isNew
-              ? 'Letters, numbers, dash or underscore'
-              : 'An id cannot change — salvos, ties and labels are keyed on it'
-          }
-        />
-      </label>
-      <label>
-        <span>Type</span>
-        <select
-          value={device.type ?? 'atem'}
-          onChange={(event) => set({ type: event.target.value as 'atem' | 'videohub' })}
-          disabled={!isNew}
-        >
-          <option value="atem">ATEM switcher</option>
-          <option value="videohub">Blackmagic Videohub</option>
-        </select>
-      </label>
-      <label>
-        <span>Address</span>
-        <input
-          value={device.address}
-          onChange={(event) => set({ address: event.target.value })}
-          placeholder={device.type === 'videohub' ? '192.168.1.60 or host:9990' : '192.168.1.14'}
-        />
-      </label>
-      <label>
-        <span>Videohub port</span>
-        <input
-          type="number"
-          value={device.videohubPort ?? ''}
-          onChange={(event) =>
-            set({ videohubPort: event.target.value ? Number(event.target.value) : undefined })
-          }
-          placeholder="auto"
-          min={1}
-          max={65535}
-        />
-        <small>
-          {device.type === 'videohub'
-            ? 'A router already speaks this protocol — leave empty unless you want an emulation in front of it.'
-            : 'The port a router panel connects to for this switcher. Empty picks the next free one.'}
-        </small>
-      </label>
-      <div className="device-form-actions">
-        <button type="submit" className="primary" disabled={busy}>
-          {isNew ? 'Add' : 'Save'}
         </button>
         <button type="button" onClick={onCancel}>
           Cancel

@@ -7,10 +7,12 @@
   },
   "devices": [
     {
-      "id": "mini",
-      "name": "ATEM Mini",
+      "id": "192-168-1-14",
+      "name": "Stage",
       "address": "192.168.1.14",
-      "videohubPort": 9994
+      "type": "atem",
+      "videohubPort": 9994,
+      "expectedModel": ""
     }
   ],
   "labels": {},

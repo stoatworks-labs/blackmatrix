@@ -37,6 +37,7 @@ export function createApp(fleet: Fleet): express.Express {
       type: device?.type,
       videohubPort: device?.videohubPort,
       capture: device?.capture,
+      expectedModel: device?.expectedModel,
     });
     res.status(result.ok ? 200 : 400).json(result);
   });

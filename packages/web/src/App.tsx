@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DevicesPage } from './components/DevicesPage';
 import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
@@ -24,6 +24,31 @@ export function App() {
 
   const devices = api.snapshot?.devices ?? [];
   const device = devices.find((candidate) => candidate.id === selectedId) ?? devices[0] ?? null;
+
+  // The support footer appends itself to <body>, which for a full-viewport
+  // control surface means the page grows past 100vh and scrolling it drags the
+  // top bar off screen. It belongs on the Devices page, which is an ordinary
+  // scrolling document and where someone would look for "about" anyway — so it
+  // gets moved there, and parked hidden otherwise.
+  useEffect(() => {
+    let cancelled = false;
+    const place = (): void => {
+      if (cancelled) return;
+      const footer = document.querySelector<HTMLElement>('.sw-support');
+      if (!footer) {
+        // The script is deferred and may not have run yet.
+        window.setTimeout(place, 120);
+        return;
+      }
+      const slot = document.getElementById('support-slot');
+      if (slot && footer.parentElement !== slot) slot.appendChild(footer);
+      else if (!slot && footer.parentElement !== document.body) document.body.appendChild(footer);
+    };
+    place();
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
 
   const salvoMembers = useMemo(
     () => new Set(builder.map((entry) => `${entry.deviceId}:${entry.destination}`)),
