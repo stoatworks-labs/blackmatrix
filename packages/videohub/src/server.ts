@@ -344,12 +344,20 @@ export class VideohubServer {
 }
 
 /**
- * Lock ownership is per IP. IPv4-mapped IPv6 addresses are flattened so a
- * client that connects over one stack matches itself over the other.
+ * Lock ownership is per IP, as the Videohub spec has it. Two rewrites keep one
+ * client from becoming two owners:
+ *
+ * - IPv4-mapped IPv6 (`::ffff:10.0.0.5`) is flattened to its IPv4 form.
+ * - IPv6 loopback (`::1`) becomes `127.0.0.1`. A dual-stack client picks a
+ *   family per connection — Node's own fetch does, request to request — so
+ *   without this a process on the host can take a lock over one stack and then
+ *   be refused its own unlock over the other. Loopback is one machine either
+ *   way, which is the thing ownership is actually about.
  */
 export function normalizeAddress(address: string | undefined): string {
   if (!address) return 'unknown';
-  return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
+  const flattened = address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
+  return flattened === '::1' ? '127.0.0.1' : flattened;
 }
 
 function lockAction(value: string): LockAction | null {

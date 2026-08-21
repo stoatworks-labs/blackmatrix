@@ -1,6 +1,6 @@
 import net from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { VideohubServer } from '../server.js';
+import { VideohubServer, normalizeAddress } from '../server.js';
 import type { LockAction, RouterBackend, RouterUpdate } from '../types.js';
 
 /** A four-output router. Output 3 always refuses, standing in for an illegal crosspoint. */
@@ -100,6 +100,22 @@ async function connect(port: number): Promise<Client> {
     },
   };
 }
+
+describe('normalizeAddress', () => {
+  it('flattens an IPv4-mapped IPv6 address', () => {
+    expect(normalizeAddress('::ffff:10.0.0.5')).toBe('10.0.0.5');
+  });
+
+  it('treats both loopbacks as one owner, since a dual-stack client flips between them', () => {
+    expect(normalizeAddress('::1')).toBe('127.0.0.1');
+    expect(normalizeAddress('127.0.0.1')).toBe('127.0.0.1');
+  });
+
+  it('leaves an ordinary address alone', () => {
+    expect(normalizeAddress('10.0.0.5')).toBe('10.0.0.5');
+    expect(normalizeAddress(undefined)).toBe('unknown');
+  });
+});
 
 describe('VideohubServer', () => {
   let router: FakeRouter;
