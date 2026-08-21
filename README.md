@@ -49,14 +49,14 @@ npm run build && npm start
 
 ## Download
 
-**[v0.1.1](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.1.1)** — desktop app, container, or run the server yourself.
+**[v0.1.2](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.1.2)** — desktop app, container, or run the server yourself.
 
 | Platform | File |
 |---|---|
-| macOS (Apple Silicon) | `BlackMatrix_0.1.1_aarch64.dmg` · `blackmatrix-0.1.1-macos-aarch64.pkg` |
-| macOS (Intel) | `BlackMatrix_0.1.1_x64.dmg` · `blackmatrix-0.1.1-macos-x86_64.pkg` |
-| Windows | `BlackMatrix_0.1.1_x64-setup.exe` |
-| Linux | `BlackMatrix_0.1.1_amd64.deb` · `BlackMatrix-0.1.1-1.x86_64.rpm` |
+| macOS (Apple Silicon) | `BlackMatrix_0.1.2_aarch64.dmg` · `blackmatrix-0.1.2-macos-aarch64.pkg` |
+| macOS (Intel) | `BlackMatrix_0.1.2_x64.dmg` · `blackmatrix-0.1.2-macos-x86_64.pkg` |
+| Windows | `BlackMatrix_0.1.2_x64-setup.exe` |
+| Linux | `BlackMatrix_0.1.2_amd64.deb` · `BlackMatrix-0.1.2-1.x86_64.rpm` |
 | Container | `ghcr.io/stoatworks-labs/blackmatrix` |
 
 The desktop app bundles its own Node runtime — nothing else needs installing.

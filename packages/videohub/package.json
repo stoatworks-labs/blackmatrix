@@ -1,6 +1,6 @@
 {
   "name": "@av/videohub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Portable Blackmagic Videohub Ethernet Protocol v2.3 server, backed by any router",
