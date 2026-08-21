@@ -1,0 +1,28 @@
+{
+  "port": 8533,
+  "videohub": {
+    "enabled": true,
+    "basePort": 9990,
+    "host": "0.0.0.0"
+  },
+  "devices": [
+    { "id": "stage", "name": "Stage", "address": "192.168.10.240" },
+    { "id": "studio", "name": "Studio", "address": "192.168.10.241", "videohubPort": 9995 }
+  ],
+  "labels": {
+    "stage": {
+      "aux.0": "FOH screens",
+      "aux.1": "Stream mix"
+    }
+  },
+  "salvos": [
+    {
+      "id": "salvo-wides",
+      "name": "All wides",
+      "crosspoints": [
+        { "deviceId": "stage", "destination": "aux.0", "source": 1 },
+        { "deviceId": "studio", "destination": "aux.0", "source": 1 }
+      ]
+    }
+  ]
+}

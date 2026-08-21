@@ -1,0 +1,26 @@
+{
+  "name": "@av/atem-matrix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Turns an ATEM state into a router crosspoint matrix: destinations, legal sources, and the calls that route them",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "atem-connection": "^3.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

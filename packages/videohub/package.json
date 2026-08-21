@@ -1,0 +1,23 @@
+{
+  "name": "@av/videohub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable Blackmagic Videohub Ethernet Protocol v2.3 server, backed by any router",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
