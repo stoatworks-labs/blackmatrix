@@ -113,11 +113,23 @@ export const MOCK_CONFIG: AppConfig = {
 };
 
 export function configPath(): string {
+  // A --config path wins, then the environment, then the working directory.
+  // The flag exists because a container is told where its config is by its
+  // command line; relying on the working directory there is how a mounted
+  // volume gets ignored in favour of an image default nobody can edit.
+  const flag = process.argv.indexOf('--config');
+  if (flag >= 0 && process.argv[flag + 1]) return path.resolve(process.argv[flag + 1] as string);
+
   const named = process.env.BLACKMATRIX_CONFIG ?? process.env.ATEM_CROSSPOINT_CONFIG;
   if (named) return named;
 
   const current = path.resolve(process.cwd(), CONFIG_FILENAME);
   if (fs.existsSync(current)) return current;
+
+  // A `config/` directory beside the app. This is where the container's mounted
+  // volume lands, and it keeps a local checkout tidy for the same reason.
+  const inConfigDir = path.resolve(process.cwd(), 'config', CONFIG_FILENAME);
+  if (fs.existsSync(inConfigDir)) return inConfigDir;
 
   // This app used to be called ATEM Crosspoint. An existing config keeps
   // working under its old name rather than the rename quietly emptying

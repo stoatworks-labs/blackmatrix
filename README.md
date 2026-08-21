@@ -41,7 +41,7 @@ different shapes (1 M/E, 4 M/E, compact) and a Videohub server per switcher. No
 hardware, no network switchers, nothing to break.
 
 Against real switchers, write `blackmatrix.config.json` (see
-`blackmatrix.config.example.json`) and:
+`config/blackmatrix.config.example.json`) and:
 
 ```bash
 npm run build && npm start
