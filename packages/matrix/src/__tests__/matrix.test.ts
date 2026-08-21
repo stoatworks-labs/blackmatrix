@@ -56,8 +56,21 @@ function twoMeState(): AtemState {
   input(state, 1, 'Camera 1', InternalPortType.External, SourceAvailability.All, MeAvailability.All);
   input(state, 2, 'Camera 2', InternalPortType.External, SourceAvailability.All, MeAvailability.All);
   input(state, 3011, 'MP 1 Key', InternalPortType.MediaPlayerKey, SourceAvailability.KeySource, MeAvailability.All);
-  // An aux output can be watched on a multiviewer and nowhere else.
-  input(state, 8001, 'Aux 1', InternalPortType.Auxiliary, SourceAvailability.Multiviewer, MeAvailability.None);
+  // Aux outputs, which double as sources so they can be watched on a
+  // multiviewer and nowhere else. Their names are the switcher's own names for
+  // those outputs, which is where the aux destinations get their labels.
+  input(state, 8001, 'Output 1', InternalPortType.Auxiliary, SourceAvailability.Multiviewer, MeAvailability.None);
+  input(state, 8002, 'Output 2', InternalPortType.Auxiliary, SourceAvailability.Multiviewer, MeAvailability.None);
+  // An HDMI passthrough: allowed on an aux, but only on its own one. Taken from
+  // a real ATEM Mini Extreme ISO, where "Camera 1 Direct" reports exactly this.
+  input(
+    state,
+    11001,
+    'Camera 1 Direct',
+    InternalPortType.ExternalDirect,
+    SourceAvailability.Auxiliary | SourceAvailability.Auxiliary1,
+    MeAvailability.None,
+  );
   // An ME 1 output may feed ME 2, an aux or a multiviewer — never ME 1.
   input(
     state,
@@ -102,7 +115,7 @@ const source = (sources: Source[], id: number): Source => {
 describe('buildSources', () => {
   it('lists every source in ATEM id order, since that order is the panel numbering', () => {
     const sources = buildSources(twoMeState());
-    expect(sources.map((candidate) => candidate.id)).toEqual([1, 2, 3011, 8001, 10010]);
+    expect(sources.map((candidate) => candidate.id)).toEqual([1, 2, 3011, 8001, 8002, 10010, 11001]);
     expect(sources[0]?.kind).toBe('input');
     expect(sources[3]?.kind).toBe('aux');
   });
@@ -156,10 +169,21 @@ describe('buildDestinations', () => {
     expect(find(single, 'me.0.program').label).toBe('Program');
   });
 
-  it('warns that program routes cut to air, and that the first multiview windows may be fixed', () => {
+  it('warns that a program route cuts to air', () => {
     expect(find(destinations, 'me.0.program').caveat).toMatch(/cuts/);
-    expect(find(destinations, 'mv.0.window.0').caveat).toMatch(/Program\/Preview/);
-    expect(find(destinations, 'mv.0.window.2').caveat).toBeUndefined();
+  });
+
+  it('does not warn about the first multiview windows', () => {
+    // Received wisdom says windows 1 and 2 are wired to program and preview. A
+    // probe of a real ATEM Mini Extreme ISO (2026-08-21) says otherwise: both
+    // accepted every source their masks allowed, 80 tests, no disagreements.
+    expect(find(destinations, 'mv.0.window.0').caveat).toBeUndefined();
+    expect(find(destinations, 'mv.0.window.1').caveat).toBeUndefined();
+  });
+
+  it('labels aux destinations with the switcher’s own names for those outputs', () => {
+    expect(find(destinations, 'aux.0').label).toBe('Output 1');
+    expect(find(destinations, 'aux.1').label).toBe('Output 2');
   });
 });
 
@@ -196,7 +220,19 @@ describe('isLegal', () => {
     expect(isLegal(keyOnly, find(destinations, 'ssrc.0.box.0'))).toBe(false);
   });
 
+  it('keeps a passthrough source on its own aux and off the others', () => {
+    // Aux|Aux1 and nothing else: the general bit says "an aux", bit 32 says
+    // which one. Reading the general bit as sufficient would put Camera 1 Direct
+    // on every output.
+    const direct = source(sources, 11001);
+    expect(isLegal(direct, find(destinations, 'aux.0'))).toBe(true);
+    expect(isLegal(direct, find(destinations, 'aux.1'))).toBe(false);
+    expect(isLegal(direct, find(destinations, 'mv.0.window.2'))).toBe(false);
+  });
+
   it('lets an ordinary camera go anywhere', () => {
+    // A camera reports every availability bit, including all three aux-bus ones,
+    // so the restriction rule must not catch it.
     const camera = source(sources, 1);
     for (const destination of destinations) {
       expect(isLegal(camera, destination), destination.id).toBe(true);

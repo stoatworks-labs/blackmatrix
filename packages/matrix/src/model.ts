@@ -7,6 +7,26 @@ import {
   type SourceKind,
 } from './types.js';
 
+/**
+ * The switcher's own names for its aux outputs, in bus order.
+ *
+ * An ATEM exposes each aux output as a source too, so it can be watched on a
+ * multiviewer — and those sources carry the names the operator sees in ATEM
+ * Software Control. Ordering by source id puts them in bus order (8001, 8002,
+ * then 8200 for the webcam out on a Mini). Returns nothing when the counts do
+ * not line up, and the caller falls back to "Aux N".
+ */
+function auxOutputNames(state: AtemState): string[] {
+  const names: string[] = [];
+  for (const key of Object.keys(state.inputs)) {
+    const input = state.inputs[Number(key)];
+    if (input?.internalPortType === Enums.InternalPortType.Auxiliary) {
+      names.push(input.longName || '');
+    }
+  }
+  return names;
+}
+
 /** Counts come from the switcher's reported capabilities, with the state arrays as a fallback. */
 function counts(state: AtemState) {
   const caps = state.info.capabilities;
@@ -84,13 +104,18 @@ export function buildDestinations(state: AtemState): Destination[] {
   const oneMv = c.multiviewers <= 1;
   const mePrefix = (me: number) => (oneMe ? '' : `ME ${me + 1} `);
 
+  // The switcher names its own outputs, and those names are better than "Aux 3":
+  // an ATEM Mini Extreme ISO calls them Output 1, Output 2 and Webcam Out. They
+  // arrive as the aux-kind *sources* (8001, 8002, 8200), in bus order.
+  const auxNames = auxOutputNames(state);
   for (let bus = 0; bus < c.auxes; bus++) {
+    const name = auxNames[bus];
     destinations.push({
       id: `aux.${bus}`,
       kind: 'aux',
       section: 'outputs',
-      label: `Aux ${bus + 1}`,
-      short: `AUX ${bus + 1}`,
+      label: name ?? `Aux ${bus + 1}`,
+      short: (name ?? `Aux ${bus + 1}`).slice(0, 8).toUpperCase(),
       address: { unit: bus },
     });
   }
@@ -198,9 +223,6 @@ export function buildDestinations(state: AtemState): Destination[] {
         label: oneMv ? `Multiview Window ${win + 1}` : `MV ${mv + 1} Window ${win + 1}`,
         short: oneMv ? `MV W${win + 1}` : `MV${mv + 1} W${win + 1}`,
         address: { unit: mv, slot: win },
-        // On most ATEMs the first two windows are wired to program and preview
-        // and the switcher simply ignores a route sent to them.
-        caveat: win < 2 ? 'Usually fixed to Program/Preview — the switcher may ignore this' : undefined,
       });
     }
   }

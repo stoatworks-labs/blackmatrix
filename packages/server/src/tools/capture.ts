@@ -24,6 +24,7 @@ interface Options {
   probe: boolean;
   probeAux: boolean;
   confirmed: boolean;
+  keepSecrets: boolean;
 }
 
 function parseArgs(argv: string[]): Options | null {
@@ -41,6 +42,7 @@ function parseArgs(argv: string[]): Options | null {
     probe: argv.includes('--probe') || argv.includes('--probe-aux'),
     probeAux: argv.includes('--probe-aux'),
     confirmed: argv.includes('--yes'),
+    keepSecrets: argv.includes('--keep-secrets'),
   };
 }
 
@@ -158,6 +160,28 @@ async function tryRoute(
   return accepted;
 }
 
+/**
+ * A capture is the switcher's whole state, and some of that is not ours to
+ * write down. The streaming block carries the **stream key** for whatever the
+ * switcher is configured to stream to — a live credential, in a file whose
+ * whole purpose is to be kept and shared.
+ *
+ * Redacted by default. `--keep-secrets` puts it back for anyone who genuinely
+ * needs a byte-exact dump and knows where the file is going.
+ *
+ * Not redacted, because they are context rather than credentials: the streaming
+ * service name and URL, and the recording filename — which is often a client or
+ * job name, so a capture still is not a thing to publish carelessly.
+ */
+function redact(state: AtemState): { redacted: boolean } {
+  const service = state.streaming?.service;
+  if (service && typeof service.key === 'string' && service.key.length > 0) {
+    service.key = '<redacted>';
+    return { redacted: true };
+  }
+  return { redacted: false };
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (!options) {
@@ -210,6 +234,11 @@ async function main(): Promise<void> {
     }
   }
 
+  if (!options.keepSecrets) {
+    const { redacted } = redact(state);
+    if (redacted) console.log('  stream key redacted (--keep-secrets to keep it)');
+  }
+
   const capture = {
     format: 'atem-crosspoint-capture' as const,
     version: 1 as const,
@@ -222,9 +251,14 @@ async function main(): Promise<void> {
     probe: probeResults,
   };
 
-  fs.mkdirSync(options.out, { recursive: true });
+  // npm runs a workspace script with the workspace as cwd, which would drop
+  // captures inside packages/server. INIT_CWD is where the human actually was.
+  const outDir = path.isAbsolute(options.out)
+    ? options.out
+    : path.resolve(process.env.INIT_CWD ?? process.cwd(), options.out);
+  fs.mkdirSync(outDir, { recursive: true });
   const file = path.join(
-    options.out,
+    outDir,
     `${slug(options.name)}-${capture.capturedAt.replace(/[:.]/g, '-')}.json`,
   );
   fs.writeFileSync(file, `${JSON.stringify(capture, null, 2)}\n`, 'utf8');

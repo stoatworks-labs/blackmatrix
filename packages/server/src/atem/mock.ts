@@ -332,16 +332,11 @@ export class MockDevice extends StateDevice {
     this.profile = profile;
   }
 
-  /**
-   * Mirrors what most switchers do: the first two multiview windows are program
-   * and preview, and a route sent to them is ignored.
-   *
-   * This is a *modelled* behaviour, and it is the mock asserting it — a replay
-   * device deliberately does not, because whether a given switcher fixes those
-   * windows is exactly the sort of thing a capture is there to answer.
-   */
-  override async setMultiViewerWindowSource(source: number, mv = 0, window = 0): Promise<void> {
-    if (window < 2) return;
-    await super.setMultiViewerWindowSource(source, mv, window);
-  }
 }
+
+// This mock used to refuse routes to multiview windows 1 and 2, on the received
+// wisdom that they are wired to program and preview. A probe of a real ATEM Mini
+// Extreme ISO (2026-08-21) disproved it: both accepted every source their masks
+// allowed, across all 16 windows, with no disagreements in 80 tests. The
+// behaviour was removed rather than kept as a "safe" default — a mock that
+// refuses what the hardware accepts teaches the wrong thing.

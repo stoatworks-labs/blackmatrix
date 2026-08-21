@@ -27,15 +27,27 @@ export function isLegal(source: Source, destination: Destination): boolean {
 
   const { unit } = destination.address;
   switch (destination.kind) {
-    case 'aux':
-      // Bits 32/64 mark sources restricted to the first or second aux bus on
-      // models that have that restriction. Read from the enum, not verified
-      // against hardware here.
-      return (
-        has(source, SourceAvailability.Auxiliary) ||
-        (unit === 0 && has(source, SourceAvailability.Auxiliary1)) ||
-        (unit === 1 && has(source, SourceAvailability.Auxiliary2))
-      );
+    case 'aux': {
+      // Bit 1 says "can go to an aux at all". Bits 32/64/128 say WHICH.
+      //
+      // Read off an ATEM Mini Extreme ISO (capture, 2026-08-21): every ordinary
+      // source carries Aux|Aux1|Aux2|Webcam, while "Camera 1 Direct" carries
+      // Aux|Aux1 and "Camera 2 Direct" carries Aux|Aux2 — the HDMI passthroughs,
+      // each of which may only reach its own output. Treating the general bit as
+      // sufficient would put Camera 1 Direct on all three outputs.
+      if (!has(source, SourceAvailability.Auxiliary)) return false;
+      const specific = [
+        SourceAvailability.Auxiliary1,
+        SourceAvailability.Auxiliary2,
+        SourceAvailability.WebcamOut,
+      ];
+      const restricted = specific.some((flag) => has(source, flag));
+      // A switcher that does not use these bits at all — anything with more than
+      // a handful of auxes — falls back to the general bit.
+      if (!restricted) return true;
+      const wanted = specific[unit];
+      return wanted === undefined ? true : has(source, wanted);
+    }
     case 'program':
     case 'preview':
     case 'uskFill':

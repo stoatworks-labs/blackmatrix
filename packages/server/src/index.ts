@@ -32,6 +32,16 @@ const app = createApp(fleet);
 const server = http.createServer(app);
 attachWebsocket(server, fleet);
 
+// Without this, a port clash is an unhandled 'error' event and a stack trace.
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    log.error(`port ${config.port} is already in use — is another copy running?`);
+  } else {
+    log.error(`http server error: ${error.message}`);
+  }
+  process.exit(1);
+});
+
 async function main(): Promise<void> {
   // The simulated router has to be listening before the fleet's videohub device
   // tries to connect to it.

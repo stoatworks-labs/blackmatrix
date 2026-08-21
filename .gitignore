@@ -4,3 +4,8 @@ out/
 *.log
 .DS_Store
 atem-crosspoint.config.json
+
+# Captures are a switcher's whole state: the streaming block, the recording
+# filename (often a client or job name), every input name. The stream key is
+# redacted on the way out, but the rest is still someone's show.
+captures/
