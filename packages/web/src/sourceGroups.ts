@@ -62,6 +62,13 @@ export const SOURCE_GROUPS: SourceGroup[] = [
     defaultOpen: false,
   },
   {
+    id: 'router',
+    label: 'Router inputs',
+    short: 'RTR',
+    kinds: ['router'],
+    defaultOpen: true,
+  },
+  {
     id: 'other',
     label: 'Other',
     short: 'OTH',

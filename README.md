@@ -47,6 +47,33 @@ Against real switchers, write `atem-crosspoint.config.json` (see
 npm run build && npm start
 ```
 
+## Videohubs, not just switchers
+
+A real Blackmagic Videohub can be a device in the same fleet:
+
+```jsonc
+{ "id": "hub", "name": "Machine room", "type": "videohub", "address": "192.168.1.60" }
+```
+
+Its inputs become sources and its outputs become destinations in the same grid,
+so one screen covers the switchers and the router between them, and a salvo can
+span both. Locks on a Videohub are the router's own and shared with every other
+client on it. Details, and the **ties** that make an ATEM bus and a router
+output follow each other: **[docs/videohub.md](docs/videohub.md)**.
+
+## Capture a switcher before you lose it
+
+```bash
+npm run capture -- 192.168.10.240 --name "Stage"
+```
+
+The availability masks this whole project depends on exist only in the protocol
+— not in an ATEM autosave, not in any file a switcher leaves behind. A capture
+puts the real shape of a real switcher on disk, and `"capture": "<file>"` on a
+device replays it with no hardware present. See
+**[docs/capture.md](docs/capture.md)**, including the opt-in probe that tests
+the masks against the hardware.
+
 ## Configuration
 
 ```jsonc
@@ -126,7 +153,7 @@ Renaming a **source** renames the input on the switcher itself. Renaming a
 
 ```
 packages/
-  videohub   @av/videohub    Videohub Ethernet Protocol v2.3 server. Knows nothing about ATEMs.
+  videohub   @av/videohub    Videohub Ethernet Protocol v2.3, server AND client. Knows nothing about ATEMs.
   matrix     @av/atem-matrix Turns an AtemState into destinations, legal sources, and routing calls.
   server     @atem-crosspoint/server  Fleet, locks, salvos, REST + websocket, one Videohub per switcher.
   web        @atem-crosspoint/web     The grid.

@@ -22,6 +22,9 @@ function has(source: Source, flag: number): boolean {
  * an ATEM will not, for example, put an aux output back on an aux bus.
  */
 export function isLegal(source: Source, destination: Destination): boolean {
+  // A plain router crosspoint takes anything; only an ATEM has opinions.
+  if (destination.accepts === 'any') return true;
+
   const { unit } = destination.address;
   switch (destination.kind) {
     case 'aux':

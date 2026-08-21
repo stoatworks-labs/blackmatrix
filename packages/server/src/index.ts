@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { loadConfig, saveConfig, MOCK_CONFIG, type AppConfig } from './config.js';
 import { Fleet } from './fleet.js';
+import { startMockRouter } from './videohub/mockRouter.js';
 import { createApp } from './api.js';
 import { attachWebsocket } from './ws.js';
 import { log } from './log.js';
@@ -32,6 +33,14 @@ const server = http.createServer(app);
 attachWebsocket(server, fleet);
 
 async function main(): Promise<void> {
+  // The simulated router has to be listening before the fleet's videohub device
+  // tries to connect to it.
+  if (mock) {
+    const port = Number(config.devices.find((device) => device.type === 'videohub')?.address.split(':')[1] ?? 19990);
+    await startMockRouter(port);
+    log.info(`simulated videohub on 127.0.0.1:${port}`);
+  }
+
   await fleet.start();
   server.listen(config.port, () => {
     log.info(`atem-crosspoint ${mock ? '(mock fleet) ' : ''}on http://localhost:${config.port}`);

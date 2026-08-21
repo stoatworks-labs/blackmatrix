@@ -8,7 +8,8 @@ export {
 export { isLegal, legalSources } from './validity.js';
 export { applyRoute, type AtemRouterCommands } from './apply.js';
 export {
-  SECTIONS,
+  ATEM_SECTIONS,
+  type Acceptance,
   type Destination,
   type DestinationAddress,
   type DestinationKind,

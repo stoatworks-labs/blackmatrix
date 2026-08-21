@@ -1,6 +1,7 @@
 /** Mirrors the server's snapshot shape. Kept hand-written so the UI has no build-order dependency. */
 
-export type SectionId = 'outputs' | 'buses' | 'keyers' | 'supersource' | 'multiview';
+/** Declared by the device — an ATEM's five, a Videohub's outputs/monitoring. */
+export type SectionId = string;
 
 export interface Section {
   id: SectionId;
@@ -11,6 +12,8 @@ export interface Section {
 export interface Destination {
   id: string;
   kind: string;
+  /** 'any' for a plain router crosspoint; absent means the ATEM mask rules. */
+  accepts?: 'atem' | 'any';
   section: SectionId;
   label: string;
   short: string;

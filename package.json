@@ -14,11 +14,13 @@
     "build:libs": "npm run build --workspace @av/videohub && npm run build --workspace @av/atem-matrix",
     "dev": "npm run build:libs && npm run dev --workspace @atem-crosspoint/server",
     "dev:mock": "npm run build:libs && npm run dev:mock --workspace @atem-crosspoint/server",
+    "dev:replay": "npm run build:libs && npm run dev --workspace @atem-crosspoint/server",
     "dev:web": "npm run dev --workspace @atem-crosspoint/web",
     "build": "npm run build:libs && npm run build --workspace @atem-crosspoint/web && npm run build --workspace @atem-crosspoint/server",
     "typecheck": "npm run build:libs && npm run typecheck --workspace @atem-crosspoint/server && npm run typecheck --workspace @atem-crosspoint/web",
     "test": "npm run build:libs && vitest run",
-    "start": "npm run start --workspace @atem-crosspoint/server"
+    "start": "npm run start --workspace @atem-crosspoint/server",
+    "capture": "npm run build:libs && npm run capture --workspace @atem-crosspoint/server --"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

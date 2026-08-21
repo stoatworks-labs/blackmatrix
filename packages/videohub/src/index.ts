@@ -1,5 +1,11 @@
 export { VideohubServer, normalizeAddress, type VideohubServerOptions } from './server.js';
 export {
+  VideohubClient,
+  type ClientStatus,
+  type VideohubClientOptions,
+  type VideohubState,
+} from './client.js';
+export {
   ACK,
   BlockParser,
   NAK,

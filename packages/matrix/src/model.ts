@@ -1,6 +1,6 @@
 import { Enums, type AtemState } from 'atem-connection';
 import {
-  SECTIONS,
+  ATEM_SECTIONS,
   type Destination,
   type MatrixModel,
   type Source,
@@ -250,7 +250,7 @@ export function readRoute(state: AtemState, destination: Destination): number {
 export function buildMatrix(state: AtemState): MatrixModel {
   const destinations = buildDestinations(state);
   return {
-    sections: SECTIONS,
+    sections: ATEM_SECTIONS,
     sources: buildSources(state),
     destinations,
     routes: readRoutes(state, destinations),

@@ -1,18 +1,13 @@
 import { EventEmitter } from 'node:events';
-import {
-  applyRoute,
-  buildMatrix,
-  isLegal,
-  type Destination,
-  type MatrixModel,
-  type Source,
-} from '@av/atem-matrix';
+import { isLegal, type Destination, type MatrixModel, type Source } from '@av/atem-matrix';
 import { VideohubServer, type LockAction, type RouterBackend, type RouterUpdate } from '@av/videohub';
-import type { AppConfig, DeviceConfig, Salvo } from './config.js';
+import type { AppConfig, DeviceConfig, Salvo, Tie } from './config.js';
 import { log } from './log.js';
-import type { DeviceRunner } from './atem/device.js';
+import { AtemRoutable, type RoutableDevice } from './atem/device.js';
 import { MockDevice } from './atem/mock.js';
 import { RealDevice } from './atem/realDevice.js';
+import { ReplayDevice } from './atem/replayDevice.js';
+import { VideohubDevice } from './videohub/videohubDevice.js';
 
 export interface DeviceView {
   id: string;
@@ -39,7 +34,7 @@ export interface RouteResult {
 
 interface DeviceEntry {
   config: DeviceConfig;
-  runner: DeviceRunner;
+  runner: RoutableDevice;
   matrix: MatrixModel | null;
   locks: Map<string, string | null>;
   videohub: VideohubServer | null;
@@ -58,6 +53,8 @@ export class Fleet extends EventEmitter {
   private entries = new Map<string, DeviceEntry>();
   private config: AppConfig;
   private mock: boolean;
+  /** Re-entrancy guard for ties: a follower's move never fires another tie. */
+  private applyingTie = false;
 
   constructor(config: AppConfig, mock: boolean) {
     super();
@@ -67,9 +64,7 @@ export class Fleet extends EventEmitter {
 
   async start(): Promise<void> {
     for (const [index, deviceConfig] of this.config.devices.entries()) {
-      const runner: DeviceRunner = this.mock
-        ? new MockDevice(deviceConfig, index)
-        : new RealDevice(deviceConfig);
+      const runner: RoutableDevice = buildRunner(deviceConfig, index, this.mock);
 
       const entry: DeviceEntry = {
         config: deviceConfig,
@@ -96,7 +91,12 @@ export class Fleet extends EventEmitter {
         log.error(`${deviceConfig.id}: connect failed — ${String(error)}`);
       }
 
-      if (this.config.videohub.enabled) {
+      // A real Videohub already speaks this protocol; putting an emulation in
+      // front of one is only useful if asked for by name.
+      const emulate =
+        this.config.videohub.enabled &&
+        (deviceConfig.type !== 'videohub' || deviceConfig.videohubPort !== undefined);
+      if (emulate) {
         const port = deviceConfig.videohubPort ?? this.config.videohub.basePort + index;
         const server = new VideohubServer({
           backend: entry.backend,
@@ -124,8 +124,8 @@ export class Fleet extends EventEmitter {
 
   /** Rebuild a device's matrix and tell everyone only about what moved. */
   private refresh(entry: DeviceEntry): void {
-    const state = entry.runner.state;
-    if (!state) {
+    const built = entry.runner.buildMatrix();
+    if (!built) {
       if (entry.matrix) {
         entry.matrix = null;
         entry.shape = '';
@@ -135,7 +135,7 @@ export class Fleet extends EventEmitter {
     }
 
     const previous = entry.matrix;
-    const matrix = buildMatrix(state);
+    const matrix = built;
     applyLabelOverrides(matrix, this.config.labels[entry.config.id]);
     entry.matrix = matrix;
 
@@ -159,6 +159,14 @@ export class Fleet extends EventEmitter {
     if (movedOutputs.length > 0) {
       this.notify(entry, { type: 'routing', outputs: movedOutputs });
       this.emit('change');
+      // Ties fire on the change, not on the request, so a route made from a
+      // panel or from the switcher's own front panel drags its follower too.
+      for (const index of movedOutputs) {
+        const destination = matrix.destinations[index];
+        if (destination) {
+          void this.applyTies(entry.config.id, destination.id, matrix.routes[destination.id] ?? -1);
+        }
+      }
     }
 
     const renamedInputs: number[] = [];
@@ -186,7 +194,7 @@ export class Fleet extends EventEmitter {
         videohubPort: entry.videohub?.port ?? null,
         videohubClients: entry.videohub?.clientCount ?? 0,
         matrix: entry.matrix,
-        locks: Object.fromEntries(entry.locks),
+        locks: this.locksOf(entry),
       })),
       salvos: this.config.salvos,
     };
@@ -194,6 +202,16 @@ export class Fleet extends EventEmitter {
 
   getEntry(deviceId: string): DeviceEntry | undefined {
     return this.entries.get(deviceId);
+  }
+
+  /**
+   * Locks come from the device when the device has them — a Videohub's locks
+   * are part of its protocol and shared with every other client on it, so ours
+   * would be a second, disagreeing opinion. An ATEM has no such concept, so the
+   * fleet holds those itself.
+   */
+  private locksOf(entry: DeviceEntry): Record<string, string | null> {
+    return entry.runner.locks ? entry.runner.locks() : Object.fromEntries(entry.locks);
   }
 
   /**
@@ -213,8 +231,8 @@ export class Fleet extends EventEmitter {
     const destination = entry.matrix.destinations.find((d) => d.id === destinationId);
     if (!destination) return { ok: false, reason: `no such destination: ${destinationId}` };
 
-    const owner = entry.locks.get(destinationId) ?? null;
-    if (owner !== null && owner !== client) {
+    const owner = this.locksOf(entry)[destinationId] ?? null;
+    if (owner !== null && owner !== client && owner !== 'this app') {
       return { ok: false, reason: `${destination.label} is locked by ${owner}` };
     }
 
@@ -224,20 +242,62 @@ export class Fleet extends EventEmitter {
       return { ok: false, reason: `${source.label} is not available on ${destination.label}` };
     }
 
-    const commands = entry.runner.commands;
-    if (!commands) return { ok: false, reason: `${deviceId} is not connected` };
-
     try {
-      await applyRoute(commands, destination, sourceId);
+      await entry.runner.route(destination, sourceId);
       return { ok: true };
     } catch (error) {
       return { ok: false, reason: String(error) };
     }
   }
 
+  /**
+   * Drive whatever follows this destination.
+   *
+   * One level only: a follower's own move does not fire a further tie. Chained
+   * ties would be a loop waiting to happen, and nothing in a real rig needs
+   * one — the depth guard is the feature, not a limitation to be lifted.
+   */
+  private async applyTies(deviceId: string, destinationId: string, source: number): Promise<void> {
+    if (this.applyingTie || source < 0) return;
+    const leader = `${deviceId}:${destinationId}`;
+    const ties = this.config.ties.filter((tie) => tie.leader === leader);
+    if (ties.length === 0) return;
+
+    this.applyingTie = true;
+    try {
+      for (const tie of ties) {
+        const target = tie.sourceMap[String(source)];
+        if (target === undefined) {
+          log.warn(`tie "${tie.name}": leader took source ${source}, which is not in its source map`);
+          continue;
+        }
+        const follower = splitRef(tie.follower);
+        if (!follower) {
+          log.warn(`tie "${tie.name}": follower "${tie.follower}" is not deviceId:destinationId`);
+          continue;
+        }
+        const result = await this.route(follower.deviceId, follower.id, target, 'tie');
+        if (!result.ok) log.warn(`tie "${tie.name}": ${result.reason}`);
+        else log.info(`tie "${tie.name}": ${tie.follower} followed to source ${target}`);
+      }
+    } finally {
+      this.applyingTie = false;
+    }
+  }
+
   lock(deviceId: string, destinationId: string, action: LockAction, client: string): RouteResult {
     const entry = this.entries.get(deviceId);
     if (!entry) return { ok: false, reason: `no such device: ${deviceId}` };
+
+    // A device that owns its locks does the work; the answer comes back as a
+    // status update like any other change.
+    if (entry.runner.setLock) {
+      const destination = entry.matrix?.destinations.find((d) => d.id === destinationId);
+      if (!destination) return { ok: false, reason: `no such destination: ${destinationId}` };
+      void entry.runner.setLock(destination, action);
+      return { ok: true };
+    }
+
     if (!entry.locks.has(destinationId)) return { ok: false, reason: `no such destination: ${destinationId}` };
 
     const owner = entry.locks.get(destinationId) ?? null;
@@ -279,16 +339,20 @@ export class Fleet extends EventEmitter {
     return { ok: true };
   }
 
-  /** Renaming a source renames the input on the switcher itself. */
+  /** Renaming a source renames the input on the device itself. */
   async setSourceLabel(deviceId: string, sourceId: number, label: string): Promise<RouteResult> {
     const entry = this.entries.get(deviceId);
     if (!entry) return { ok: false, reason: `no such device: ${deviceId}` };
     try {
-      await entry.runner.setInputLabel(sourceId, label, label.slice(0, 4));
+      await entry.runner.setSourceLabel(sourceId, label);
       return { ok: true };
     } catch (error) {
       return { ok: false, reason: String(error) };
     }
+  }
+
+  get ties(): Tie[] {
+    return this.config.ties;
   }
 
   get salvos(): Salvo[] {
@@ -321,6 +385,25 @@ export class Fleet extends EventEmitter {
     }
     return { ok: failures.length === 0, failures };
   }
+}
+
+/** Builds the right kind of device for a config entry. */
+function buildRunner(config: DeviceConfig, index: number, mock: boolean): RoutableDevice {
+  if (config.type === 'videohub') {
+    if (mock) log.warn(`${config.id}: --mock has no simulated Videohub; connecting to the real one`);
+    return new VideohubDevice(config);
+  }
+  // Three kinds of ATEM, one interface: synthetic, replayed from a capture, or
+  // the real thing on the network.
+  if (mock) return new AtemRoutable(new MockDevice(config, index));
+  if (config.capture) return new AtemRoutable(ReplayDevice.fromFile(config, config.capture));
+  return new AtemRoutable(new RealDevice(config));
+}
+
+function splitRef(value: string): { deviceId: string; id: string } | null {
+  const at = value.indexOf(':');
+  if (at <= 0) return null;
+  return { deviceId: value.slice(0, at), id: value.slice(at + 1) };
 }
 
 function shapeOf(matrix: MatrixModel): string {
@@ -389,7 +472,8 @@ class AtemRouterBackend implements RouterBackend {
   }
 
   getLocks(): Array<string | null> {
-    return this.destinations.map((destination) => this.entry.locks.get(destination.id) ?? null);
+    const locks = this.entry.runner.locks?.() ?? Object.fromEntries(this.entry.locks);
+    return this.destinations.map((destination) => locks[destination.id] ?? null);
   }
 
   async setRoute(output: number, input: number, client: string): Promise<boolean> {

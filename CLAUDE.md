@@ -13,7 +13,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Build then run: `npm run build && npm start`
 
 ## Layout (packages/)
-- `videohub` — `@av/videohub`, protocol + TCP server, no ATEM knowledge
+- `videohub` — `@av/videohub`, protocol server AND client, no ATEM knowledge
 - `matrix` — `@av/atem-matrix`, AtemState → destinations/legality/routing, no I/O
 - `server` — `@atem-crosspoint/server`
 - `web` — `@atem-crosspoint/web`
@@ -23,4 +23,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Destination order = Videohub output numbers; source order = input numbers. Append, never insert.
 - Legality comes from the switcher's `sourceAvailability`/`meAvailability`, not model tables.
 - Locks are per IP, matching the Videohub spec. Refused route = ACK + unchanged status; NAK is for malformed.
-- Verified against `--mock` and a raw TCP client only — no ATEM hardware, no real panel.
+- Verified against `--mock` and a raw TCP client only — no ATEM hardware, no real panel, no real Videohub.
+- Devices are `RoutableDevice`: ATEM (real/mock/replayed capture) or Videohub. A Videohub owns its own locks.
+- `npm run capture -- <address>` takes a capture off hardware; `"capture": "<file>"` replays it as a device.
+- Ties make one destination follow another across boxes, one level deep.

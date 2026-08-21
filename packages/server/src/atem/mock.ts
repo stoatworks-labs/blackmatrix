@@ -1,8 +1,6 @@
-import { EventEmitter } from 'node:events';
 import { AtemStateUtil, Enums, type AtemState } from 'atem-connection';
-import type { AtemRouterCommands } from '@av/atem-matrix';
 import type { DeviceConfig } from '../config.js';
-import type { ConnectionState, DeviceRunner } from './device.js';
+import { StateDevice } from './stateDevice.js';
 
 const { InternalPortType, MeAvailability, SourceAvailability } = Enums;
 
@@ -314,129 +312,36 @@ function buildState(profile: MockProfile, seed: number): AtemState {
 }
 
 /**
- * A synthetic switcher that holds a real-shaped AtemState and honours the same
- * routing commands the real one does, so the whole app — matrix, UI, Videohub
- * protocol — runs end to end with no hardware on the network.
+ * A synthetic switcher, for `--mock`. Its state is invented — plausible shapes
+ * chosen to exercise the matrix, not model tables — and it honours the routing
+ * commands through StateDevice, so the whole app runs end to end with no
+ * hardware on the network.
  */
-export class MockDevice extends EventEmitter implements DeviceRunner, AtemRouterCommands {
-  readonly id: string;
-  readonly name: string;
-  readonly address: string;
-  private atemState: AtemState;
+export class MockDevice extends StateDevice {
   private profile: MockProfile;
-  private status: ConnectionState = 'disconnected';
 
   constructor(config: DeviceConfig, index: number) {
-    super();
-    this.id = config.id;
-    this.name = config.name;
-    this.address = config.address;
-    this.profile = PROFILES[index % PROFILES.length] as MockProfile;
-    this.atemState = buildState(this.profile, index);
+    const profile = PROFILES[index % PROFILES.length] as MockProfile;
+    super({
+      id: config.id,
+      name: config.name,
+      address: config.address,
+      model: profile.product,
+      state: buildState(profile, index),
+    });
+    this.profile = profile;
   }
 
-  get connection(): ConnectionState {
-    return this.status;
-  }
-
-  get state(): AtemState | null {
-    return this.status === 'connected' ? this.atemState : null;
-  }
-
-  get model(): string {
-    return this.profile.product;
-  }
-
-  get commands(): AtemRouterCommands | null {
-    return this.status === 'connected' ? this : null;
-  }
-
-  async connect(): Promise<void> {
-    this.status = 'connected';
-    this.emit('connection', this.status);
-    this.emit('state');
-  }
-
-  async disconnect(): Promise<void> {
-    this.status = 'disconnected';
-    this.emit('connection', this.status);
-  }
-
-  async setInputLabel(inputId: number, longName: string, shortName: string): Promise<void> {
-    const input = this.atemState.inputs[inputId];
-    if (!input) return;
-    input.longName = longName;
-    input.shortName = shortName;
-    this.changed();
-  }
-
-  private changed(): void {
-    this.emit('state');
-  }
-
-  async setAuxSource(source: number, bus = 0): Promise<void> {
-    this.atemState.video.auxilliaries[bus] = source;
-    this.changed();
-  }
-
-  async changeProgramInput(input: number, me = 0): Promise<void> {
-    AtemStateUtil.getMixEffect(this.atemState, me).programInput = input;
-    this.changed();
-  }
-
-  async changePreviewInput(input: number, me = 0): Promise<void> {
-    AtemStateUtil.getMixEffect(this.atemState, me).previewInput = input;
-    this.changed();
-  }
-
-  async setUpstreamKeyerFillSource(fillSource: number, me = 0, keyer = 0): Promise<void> {
-    const upstreamKeyer = AtemStateUtil.getMixEffect(this.atemState, me).upstreamKeyers[keyer];
-    if (upstreamKeyer) upstreamKeyer.fillSource = fillSource;
-    this.changed();
-  }
-
-  async setUpstreamKeyerCutSource(cutSource: number, me = 0, keyer = 0): Promise<void> {
-    const upstreamKeyer = AtemStateUtil.getMixEffect(this.atemState, me).upstreamKeyers[keyer];
-    if (upstreamKeyer) upstreamKeyer.cutSource = cutSource;
-    this.changed();
-  }
-
-  async setDownstreamKeyFillSource(input: number, key = 0): Promise<void> {
-    const downstreamKeyer = this.atemState.video.downstreamKeyers[key];
-    if (downstreamKeyer?.sources) downstreamKeyer.sources.fillSource = input;
-    this.changed();
-  }
-
-  async setDownstreamKeyCutSource(input: number, key = 0): Promise<void> {
-    const downstreamKeyer = this.atemState.video.downstreamKeyers[key];
-    if (downstreamKeyer?.sources) downstreamKeyer.sources.cutSource = input;
-    this.changed();
-  }
-
-  async setSuperSourceBoxSettings(props: { source: number }, box = 0, ssrcId = 0): Promise<void> {
-    const superSourceBox = AtemStateUtil.getSuperSource(this.atemState, ssrcId).boxes[box as 0 | 1 | 2 | 3];
-    if (superSourceBox) superSourceBox.source = props.source;
-    this.changed();
-  }
-
-  async setSuperSourceProperties(
-    props: { artFillSource?: number; artCutSource?: number },
-    ssrcId = 0,
-  ): Promise<void> {
-    const properties = AtemStateUtil.getSuperSource(this.atemState, ssrcId).properties;
-    if (properties) {
-      if (props.artFillSource !== undefined) properties.artFillSource = props.artFillSource;
-      if (props.artCutSource !== undefined) properties.artCutSource = props.artCutSource;
-    }
-    this.changed();
-  }
-
-  async setMultiViewerWindowSource(source: number, mv = 0, window = 0): Promise<void> {
-    // Mirrors the hardware: the first two windows are program and preview and
-    // the switcher ignores a route sent to them.
+  /**
+   * Mirrors what most switchers do: the first two multiview windows are program
+   * and preview, and a route sent to them is ignored.
+   *
+   * This is a *modelled* behaviour, and it is the mock asserting it — a replay
+   * device deliberately does not, because whether a given switcher fixes those
+   * windows is exactly the sort of thing a capture is there to answer.
+   */
+  override async setMultiViewerWindowSource(source: number, mv = 0, window = 0): Promise<void> {
     if (window < 2) return;
-    const multiViewerWindow = AtemStateUtil.getMultiViewer(this.atemState, mv).windows[window];
-    if (multiViewerWindow) multiViewerWindow.source = source;
-    this.changed();
+    await super.setMultiViewerWindowSource(source, mv, window);
   }
 }

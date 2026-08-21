@@ -40,10 +40,27 @@ Keep the two libraries portable. `@av/videohub` should stay usable to put a
 Videohub front end on anything with crosspoints; `@av/atem-matrix` should stay
 free of sockets and files, which is what makes it testable with no hardware.
 
+## 3a. Three device kinds, one interface
+
+`RoutableDevice` (in `atem/device.ts`) is what the fleet works with: it builds its own
+matrix and applies its own crosspoints. Three implementations:
+
+- **`AtemRoutable`** wraps an ATEM runner — real (`RealDevice`), synthetic (`MockDevice`) or
+  replayed from a capture (`ReplayDevice`). All three share `StateDevice`, which is an
+  AtemState plus the commands that mutate it.
+- **`VideohubDevice`** is a real Blackmagic router over `@av/videohub`'s client. Every
+  crosspoint is legal (`accepts: 'any'`) and **the router owns its locks**, so the fleet
+  delegates rather than keeping a second, disagreeing opinion.
+
+The model types (`MatrixModel`, `Destination`, `Source`, `Section`) live in
+`@av/atem-matrix` but are router-generic — `SectionId` is a plain string and each device
+declares its own sections. Only the *builders* in that package are ATEM-specific.
+
 ## 4. Commands
 
 ```bash
-npm run dev:mock     # <- DEFAULT for development. Three simulated switchers.
+npm run dev:mock     # <- DEFAULT. Three simulated switchers AND a simulated Videohub.
+npm run capture -- <address> --name "Stage"   # take a capture off real hardware
 npm run dev          # against real switchers from atem-crosspoint.config.json
 npm run dev:web      # UI only, proxying to a server on :8533
 npm test             # vitest: protocol codec, protocol server over real TCP, matrix model
@@ -62,6 +79,15 @@ never from a per-model table. Add a destination kind in three places: `types.ts`
 (the kind), `model.ts` (build + read), `validity.ts` (legality), `apply.ts` (the
 call). The UI repeats the legality rules in `web/src/availability.ts` purely to
 grey cells out — the server stays the authority and refuses illegal routes anyway.
+
+## 5a. Captures are the irreplaceable artefact
+
+The availability masks everything depends on exist **only in the protocol**. An ATEM
+autosave XML has inputs, names, keyer sources, aux assignments and multiview windows — and
+no masks. So if hardware is available, `npm run capture` first and ask questions later; a
+capture replays as a device (`"capture": "<file>"`) forever after. `--probe` is the opt-in,
+writes-to-the-switcher mode that tests the masks against reality; it never touches program,
+preview, keyers or SuperSource.
 
 ## 6. Traps
 
@@ -82,6 +108,13 @@ grey cells out — the server stays the authority and refuses illegal routes any
   from the state.
 - **`--mock` never writes the config file.** A simulated fleet must not overwrite
   a real operator's device list.
+- **`--mock` also starts a simulated Videohub** and points a `videohub` device at it over
+  real TCP. That is what tests the client half of the protocol without hardware — the
+  server and client in `@av/videohub` are written from the same spec from opposite ends,
+  and testing them against each other is how a disagreement surfaces.
+- **Ties are one level deep, on purpose.** A follower's move never fires another tie.
+- **A Videohub device gets no emulation by default.** It already speaks the protocol;
+  putting an emulation in front of one only happens if a `videohubPort` says so.
 
 ## 7. Status — be precise about it
 

@@ -17,6 +17,10 @@ const has = (source: Source, flag: number): boolean => (source.availability & fl
 const onMe = (source: Source, me: number): boolean => (source.meAvailability & (1 << me)) !== 0;
 
 export function isLegal(source: Source, destination: Destination): boolean {
+  // A Videohub takes any input on any output. Applying switcher rules to one
+  // would hatch out the entire grid.
+  if (destination.accepts === 'any') return true;
+
   const unit = destination.address.unit;
   switch (destination.kind) {
     case 'aux':

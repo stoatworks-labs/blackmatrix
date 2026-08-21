@@ -1,6 +1,12 @@
 # Speaking Videohub
 
-`@av/videohub` implements the **Blackmagic Videohub Ethernet Protocol**, as
+`@av/videohub` implements **both halves** of the **Blackmagic Videohub Ethernet
+Protocol**: a server, so an ATEM can be driven by router panels, and a client,
+so a real Videohub can be driven by this app. They are tested against each
+other — written from the same specification, one from each end, so anywhere
+they disagree one of them has it wrong.
+
+The server implements, as
 published in *Videohub Developer Information* (Blackmagic Design, May 2018),
 protocol version **2.3**. It is a text protocol on TCP **9990**: blocks with an
 ALL-CAPS header ending in a colon, one item per line, terminated by a blank line.
@@ -61,6 +67,55 @@ out-of-range request gets `NAK` instead.
   pluggable cards
 - The RS-422 ("Leitch") protocol
 - Salvos — they are not part of the Ethernet protocol; this app has its own
+
+## Driving a real Videohub
+
+A Videohub in the config is a device in the fleet like any switcher:
+
+```jsonc
+{ "id": "hub", "name": "Machine room", "type": "videohub", "address": "192.168.1.60" }
+```
+
+The address may carry a port (`192.168.1.60:9990` is the default). Its inputs
+become sources, its outputs and monitoring outputs become destinations in their
+own sections, and every crosspoint is legal — a router has no availability
+rules, and applying the switcher's would hatch out the whole grid.
+
+Two things work differently to an ATEM, both because the router owns them:
+
+- **Locks are the router's**, shared with every other client connected to it, so
+  this app reports and sets them rather than keeping its own. A lock this app
+  holds shows as "this app"; one held elsewhere shows as "another client".
+- **Renaming a source renames the input on the router**, exactly as renaming an
+  ATEM source renames the switcher's input.
+
+A Videohub gets **no protocol emulation** of its own by default — it already is
+one. Name a `videohubPort` on the device if you want this app's aggregated view
+served in front of it anyway.
+
+## Ties: making one destination follow another
+
+```jsonc
+"ties": [
+  {
+    "id": "house",
+    "name": "House screen follows Stage aux 1",
+    "leader": "stage:aux.0",
+    "follower": "hub:out.1",
+    "sourceMap": { "1": 4, "2": 5, "3": 6 }
+  }
+]
+```
+
+Route the leader and the follower goes to the matching source. The mapping is
+explicit because nothing else could be: "camera 1" is input 1 on a switcher and
+whatever it happens to be patched to on a router.
+
+Ties fire on the **change**, not on the request, so a route made from a panel or
+from the switcher's own front panel drags its follower too. A source with no
+mapping leaves the follower alone and logs it. Ties are one level deep — a
+follower's own move never fires another tie, which is the feature rather than a
+limitation: chained ties are a loop waiting to happen.
 
 ## Trying it by hand
 

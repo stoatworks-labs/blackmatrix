@@ -6,8 +6,29 @@
     "host": "0.0.0.0"
   },
   "devices": [
-    { "id": "stage", "name": "Stage", "address": "192.168.10.240" },
-    { "id": "studio", "name": "Studio", "address": "192.168.10.241", "videohubPort": 9995 }
+    {
+      "id": "stage",
+      "name": "Stage",
+      "address": "192.168.10.240"
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "address": "192.168.10.241",
+      "videohubPort": 9995
+    },
+    {
+      "id": "hub",
+      "name": "Machine room",
+      "type": "videohub",
+      "address": "192.168.1.60"
+    },
+    {
+      "id": "bench",
+      "name": "Bench (replayed capture)",
+      "address": "",
+      "capture": "captures/stage-2026-08-21.json"
+    }
   ],
   "labels": {
     "stage": {
@@ -20,9 +41,30 @@
       "id": "salvo-wides",
       "name": "All wides",
       "crosspoints": [
-        { "deviceId": "stage", "destination": "aux.0", "source": 1 },
-        { "deviceId": "studio", "destination": "aux.0", "source": 1 }
+        {
+          "deviceId": "stage",
+          "destination": "aux.0",
+          "source": 1
+        },
+        {
+          "deviceId": "studio",
+          "destination": "aux.0",
+          "source": 1
+        }
       ]
+    }
+  ],
+  "ties": [
+    {
+      "id": "house",
+      "name": "House screen follows Stage aux 1",
+      "leader": "stage:aux.0",
+      "follower": "hub:out.1",
+      "sourceMap": {
+        "1": 4,
+        "2": 5,
+        "3": 6
+      }
     }
   ]
 }

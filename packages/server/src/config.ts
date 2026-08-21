@@ -2,19 +2,50 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { log } from './log.js';
 
+export type DeviceKind = 'atem' | 'videohub';
+
 export interface DeviceConfig {
   id: string;
   name: string;
-  /** Hostname or IP of the switcher. Ignored in --mock. */
+  /** Defaults to 'atem'. A 'videohub' is a real Blackmagic router on the network. */
+  type?: DeviceKind;
+  /** Hostname or IP of the switcher. Ignored in --mock, and when `capture` is set. */
   address: string;
-  /** TCP port for this device's Videohub protocol server. */
+  /**
+   * TCP port for this device's Videohub protocol *server* — the emulation that
+   * lets panels drive it. Videohub devices already are one, so they get no
+   * emulation unless a port is named here explicitly.
+   */
   videohubPort?: number;
+  /**
+   * Path to a capture file (see `npm run capture`). When set, this device is
+   * replayed from that file instead of connecting to hardware — the way to keep
+   * developing against a real switcher's exact shape once it has gone.
+   */
+  capture?: string;
 }
 
 export interface Salvo {
   id: string;
   name: string;
   crosspoints: Array<{ deviceId: string; destination: string; source: number }>;
+}
+
+/**
+ * A tie makes one destination follow another across boxes: route the leader,
+ * and the follower goes to the matching source. The mapping is explicit because
+ * nothing else could be — "camera 1" is input 1 on a switcher and whatever it
+ * happens to be patched to on a router.
+ */
+export interface Tie {
+  id: string;
+  name: string;
+  /** `deviceId:destinationId` — the destination an operator actually routes. */
+  leader: string;
+  /** `deviceId:destinationId` — the one that follows. */
+  follower: string;
+  /** Leader source id -> follower source id. */
+  sourceMap: Record<string, number>;
 }
 
 export interface AppConfig {
@@ -30,6 +61,7 @@ export interface AppConfig {
   /** Per device, destination id -> operator's own name for it. */
   labels: Record<string, Record<string, string>>;
   salvos: Salvo[];
+  ties: Tie[];
 }
 
 export const CONFIG_FILENAME = 'atem-crosspoint.config.json';
@@ -40,6 +72,7 @@ const DEFAULTS: AppConfig = {
   devices: [],
   labels: {},
   salvos: [],
+  ties: [],
 };
 
 /** A three-switcher fleet with deliberately different shapes, for --mock. */
@@ -49,6 +82,9 @@ export const MOCK_CONFIG: AppConfig = {
     { id: 'stage', name: 'Stage', address: 'mock://stage' },
     { id: 'studio', name: 'Studio', address: 'mock://studio' },
     { id: 'flypack', name: 'Flypack', address: 'mock://flypack' },
+    // A real videohub device pointed at the simulated router --mock starts up,
+    // so the client half of the protocol is exercised over actual TCP.
+    { id: 'router', name: 'Router', type: 'videohub', address: '127.0.0.1:19990' },
   ],
   labels: { stage: { 'aux.0': 'FOH screens' } },
   salvos: [
@@ -58,7 +94,18 @@ export const MOCK_CONFIG: AppConfig = {
       crosspoints: [
         { deviceId: 'stage', destination: 'aux.0', source: 1 },
         { deviceId: 'studio', destination: 'aux.0', source: 1 },
+        { deviceId: 'router', destination: 'out.0', source: 0 },
       ],
+    },
+  ],
+  ties: [
+    {
+      id: 'tie-house',
+      name: 'House screen follows Stage aux 1',
+      leader: 'stage:aux.0',
+      follower: 'router:out.1',
+      // Cameras 1-4 on the switcher are router inputs 5-8 in this imaginary rig.
+      sourceMap: { '1': 4, '2': 5, '3': 6, '4': 7 },
     },
   ],
 };
@@ -82,6 +129,7 @@ export function loadConfig(): AppConfig {
       devices: parsed.devices ?? [],
       labels: parsed.labels ?? {},
       salvos: parsed.salvos ?? [],
+      ties: parsed.ties ?? [],
     };
   } catch (error) {
     log.error(`config at ${file} is not readable JSON: ${String(error)}`);
