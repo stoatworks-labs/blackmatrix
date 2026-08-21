@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DevicesPage } from './components/DevicesPage';
 import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
@@ -29,22 +29,26 @@ export function App() {
 
   // The support footer appends itself to <body>, which for a full-viewport
   // control surface means the page grows past 100vh and scrolling it drags the
-  // top bar off screen. It belongs on the Devices page, which is an ordinary
-  // scrolling document and where someone would look for "about" anyway — so it
-  // gets moved there, and parked hidden otherwise.
+  // top bar off screen. It belongs on a page that scrolls anyway.
+  //
+  // The node is held rather than re-found each time: moving it into a page's
+  // slot makes it a child of that page, so React removes it from the document
+  // when that page unmounts, and a fresh querySelector then finds nothing.
+  const footerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     let cancelled = false;
     const place = (): void => {
       if (cancelled) return;
-      const footer = document.querySelector<HTMLElement>('.sw-support');
+      footerRef.current ??= document.querySelector<HTMLElement>('.sw-support');
+      const footer = footerRef.current;
       if (!footer) {
         // The script is deferred and may not have run yet.
         window.setTimeout(place, 120);
         return;
       }
       const slot = document.getElementById('support-slot');
-      if (slot && footer.parentElement !== slot) slot.appendChild(footer);
-      else if (!slot && footer.parentElement !== document.body) document.body.appendChild(footer);
+      const home = slot ?? document.body;
+      if (footer.parentElement !== home) home.appendChild(footer);
     };
     place();
     return () => {
