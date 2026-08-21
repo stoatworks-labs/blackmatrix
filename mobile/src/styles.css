@@ -66,7 +66,11 @@ button:disabled { opacity: 0.5; }
 .list .meta { color: var(--dim); font-size: 12px; }
 
 .manual { display: grid; grid-template-columns: 1fr 88px; gap: 10px; align-items: end; }
-.manual label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--dim); }
+/* min-width:0 on both the track item and the field: a grid item's automatic
+   minimum is its content, and an <input>'s content width is its default `size`
+   — about 20 characters. Without this the port column pushes the row wider than
+   the screen and hangs off the right edge on a narrow phone. */
+.manual label { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; color: var(--dim); }
 .manual input {
   min-height: 48px;
   padding: 0 12px;
@@ -74,6 +78,7 @@ button:disabled { opacity: 0.5; }
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
+  min-width: 0;
   font-family: inherit;
   /* 16px exactly, and not inherited from the 12px label around it: iOS zooms
      the whole page when a focused field is smaller than this, and never zooms
