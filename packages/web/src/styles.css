@@ -10,6 +10,9 @@
   --ok: #3fb950;
   --cell: 34px;
   --rowhead: 268px;
+  /* A folded source group narrows to this, rather than vanishing. */
+  --stub: 26px;
+  --grouphead: 24px;
 
   color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
@@ -87,9 +90,14 @@ main { display: flex; flex: 1; min-height: 0; }
   position: sticky;
   top: 0;
   left: 0;
-  z-index: 4;
+  z-index: 5;
+  /* Spans the group row and the source row, so both stick as one block. */
+  grid-row: span 2;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
   padding: 6px 8px;
   background: var(--panel);
   border-right: 1px solid var(--line);
@@ -99,10 +107,59 @@ main { display: flex; flex: 1; min-height: 0; }
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.corner-tools { display: flex; gap: 4px; }
+.corner-tools button {
+  padding: 3px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--dim);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.corner-tools button:hover { color: var(--text); border-color: var(--dim); }
+.corner-note { color: var(--routed); text-transform: none; letter-spacing: 0; }
+
+/* --- source group headers --- */
+
+.grouphead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--grouphead);
+  padding: 0 7px;
+  background: #1b222c;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  color: var(--text);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  overflow: hidden;
+}
+.grouphead:hover { background: #232c38; }
+.grouphead.folded { justify-content: center; padding: 0; color: var(--routed); }
+.grouphead-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grouphead-count { color: var(--dim); }
+.chev { color: var(--dim); font-size: 9px; }
+
+.stubhead {
+  background: #1b222c;
+  cursor: pointer;
+  padding: 0 0 6px;
+}
+.stubhead:hover { background: #232c38; }
+.stubhead .colhead-text { color: var(--routed); font-size: 10px; }
 
 .colhead {
   position: sticky;
-  top: 0;
+  top: var(--grouphead);
   z-index: 2;
   display: flex;
   align-items: flex-end;
@@ -140,11 +197,25 @@ main { display: flex; flex: 1; min-height: 0; }
   left: 10px;
   display: inline-flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text);
   white-space: nowrap;
+  cursor: pointer;
 }
+.section-inner:hover strong { color: var(--routed); }
+.section-count {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--dim);
+  font-size: 10px;
+}
+.section-locked { color: var(--routed); font-size: 10px; }
+.section-hint { color: var(--dim); font-size: 11px; }
 .section-inner strong { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
-.section-inner span { color: var(--dim); font-size: 11px; }
 
 .rowhead {
   position: sticky;
@@ -230,6 +301,17 @@ main { display: flex; flex: 1; min-height: 0; }
     #1a1f27 5px
   );
 }
+/* A folded group's column in each row: still says whether the route is inside. */
+.cell.stub {
+  background: repeating-linear-gradient(45deg, transparent, transparent 5px, #1a1f27 5px, #1a1f27 6px);
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+.cell.stub:hover { background: #263040; }
+.cell.stub.holds { background: #201a10; }
+
+.tally.small { width: 9px; height: 9px; box-shadow: none; }
+
 .tally {
   width: 15px;
   height: 15px;
