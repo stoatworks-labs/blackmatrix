@@ -1,7 +1,5 @@
-import { Enums } from 'atem-connection';
+import { MeAvailability, SourceAvailability } from './enums.js';
 import type { Destination, Source } from './types.js';
-
-const { MeAvailability, SourceAvailability } = Enums;
 
 function onMe(source: Source, me: number): boolean {
   const bit = 1 << me;

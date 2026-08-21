@@ -4,10 +4,19 @@ import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { useFleet } from './useFleet';
+import { useSimulatorFleet } from './simulator/useSimulatorFleet';
 import type { Destination } from './types';
 
+/**
+ * Chosen at build time, so the simulator build contains no client for a server
+ * it will never have, and the real build contains no simulator. Constant across
+ * every render, which is what makes picking a hook like this legitimate.
+ */
+const SIMULATOR = import.meta.env.VITE_SIMULATOR === '1';
+const useFleetImpl = SIMULATOR ? useSimulatorFleet : useFleet;
+
 export function App() {
-  const api = useFleet();
+  const api = useFleetImpl();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<'matrix' | 'devices' | 'sources'>('matrix');
   const [building, setBuilding] = useState(false);
@@ -35,11 +44,22 @@ export function App() {
 
   return (
     <div className="app">
+      {SIMULATOR ? (
+        <div className="demo-banner">
+          <strong>Demo.</strong> Every device here is simulated in this browser tab. Nothing is on a network, nothing
+          is being controlled, and no switcher or router can be reached from a web page —{' '}
+          <span className="demo-why">
+            the ATEM protocol is UDP and the Videohub protocol is raw TCP, neither of which a browser can open
+          </span>
+          . To route real hardware, run the app on the show network.
+        </div>
+      ) : null}
+
       <header className="topbar">
         <div className="brand">
-          <h1>ATEM Crosspoint</h1>
+          <h1>ATEM Crosspoint{SIMULATOR ? ' — Demo' : ''}</h1>
           <span className={`link${api.connected ? ' up' : ''}`}>
-            {api.connected ? 'live' : 'reconnecting…'}
+            {SIMULATOR ? 'simulated' : api.connected ? 'live' : 'reconnecting…'}
           </span>
         </div>
         <nav className="devices">
@@ -114,6 +134,7 @@ export function App() {
             onRemove={api.removeDevice}
             onReconnect={api.reconnectDevice}
             onDiscover={api.discover}
+            onAddFromCatalogue={api.addFromCatalogue}
           />
         ) : device ? (
           <Matrix
@@ -128,9 +149,10 @@ export function App() {
           <div className="empty">
             <h2>Nothing to route yet</h2>
             <p>
-              Open <button type="button" className="linkish" onClick={() => setView('devices')}>Devices</button> to
-              scan the network or add one by address, or start the server with <code>--mock</code> for a simulated
-              fleet.
+              Open <button type="button" className="linkish" onClick={() => setView('devices')}>Devices</button>{' '}
+              {SIMULATOR
+                ? 'and add a virtual switcher or router from the model list.'
+                : 'to scan the network or add one by address.'}
             </p>
           </div>
         )}

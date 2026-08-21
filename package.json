@@ -16,6 +16,8 @@
     "dev:mock": "npm run build:libs && npm run dev:mock --workspace @atem-crosspoint/server",
     "dev:replay": "npm run build:libs && npm run dev --workspace @atem-crosspoint/server",
     "dev:web": "npm run dev --workspace @atem-crosspoint/web",
+    "sim": "npm run build:libs && npm run dev:sim --workspace @atem-crosspoint/web",
+    "sim:build": "npm run build:libs && npm run build:sim --workspace @atem-crosspoint/web",
     "build": "npm run build:libs && npm run build --workspace @atem-crosspoint/web && npm run build --workspace @atem-crosspoint/server",
     "typecheck": "npm run build:libs && npm run typecheck --workspace @atem-crosspoint/server && npm run typecheck --workspace @atem-crosspoint/web",
     "test": "npm run build:libs && vitest run",

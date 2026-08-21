@@ -1,8 +1,10 @@
 import { AtemStateUtil, Enums, type AtemState } from 'atem-connection';
 import { describe, expect, it } from 'vitest';
 import { applyRoute, type AtemRouterCommands } from '../apply.js';
-import { buildDestinations, buildMatrix, buildSources, readRoutes } from '../model.js';
+import { buildDestinations, buildMatrix, buildSources, readRoute, readRoutes } from '../model.js';
+import { applyRouteToState } from '../mutate.js';
 import { isLegal } from '../validity.js';
+import * as Local from '../enums.js';
 import type { Destination, Source } from '../types.js';
 
 const { InternalPortType, MeAvailability, SourceAvailability } = Enums;
@@ -88,6 +90,48 @@ function twoMeState(): AtemState {
     mixEffect.programInput = me === 0 ? 1 : 2;
     mixEffect.previewInput = me === 0 ? 2 : 1;
   }
+  // Keyers and SuperSource boxes exist in the state as well as in the
+  // capabilities, so a route has somewhere to land. SuperSource *properties* are
+  // deliberately left unset — that is the "the switcher has not said" case.
+  for (const me of [0, 1]) {
+    const mixEffect = AtemStateUtil.getMixEffect(state, me);
+    for (const keyer of [0, 1]) {
+      mixEffect.upstreamKeyers[keyer] = {
+        upstreamKeyerId: keyer,
+        canFlyKey: false,
+        mixEffectKeyType: Enums.MixEffectKeyType.Luma,
+        flyEnabled: false,
+        fillSource: 1,
+        cutSource: 3011,
+        onAir: false,
+        maskSettings: { maskEnabled: false, maskTop: 0, maskBottom: 0, maskLeft: 0, maskRight: 0 },
+        flyKeyframes: [undefined, undefined],
+      };
+    }
+  }
+  state.video.downstreamKeyers[0] = {
+    onAir: false,
+    inTransition: false,
+    remainingFrames: 0,
+    isAuto: false,
+    sources: { fillSource: 1, cutSource: 3011 },
+  };
+  const superSource = AtemStateUtil.getSuperSource(state, 0);
+  for (const box of [0, 1, 2, 3] as const) {
+    superSource.boxes[box] = {
+      enabled: true,
+      source: 1,
+      x: 0,
+      y: 0,
+      size: 500,
+      cropped: false,
+      cropTop: 0,
+      cropBottom: 0,
+      cropLeft: 0,
+      cropRight: 0,
+    };
+  }
+
   const multiViewer = AtemStateUtil.getMultiViewer(state, 0);
   for (let win = 0; win < 4; win++) {
     multiViewer.windows[win] = {
@@ -300,5 +344,48 @@ describe('applyRoute', () => {
       'art {"artCutSource":5} 0',
       'mv 5 0 3',
     ]);
+  });
+});
+
+describe('the inlined enums', () => {
+  // This package inlines a few of atem-connection's enum values so it can be
+  // bundled for a browser — importing them for real pulls in UDP sockets and
+  // worker threads. Inlining is only safe while the values still match, so this
+  // asserts exactly that, against the library itself.
+  it('still matches atem-connection', () => {
+    expect(Local.InternalPortType.Auxiliary).toBe(Enums.InternalPortType.Auxiliary);
+    expect(Local.InternalPortType.ExternalDirect).toBe(Enums.InternalPortType.ExternalDirect);
+    expect(Local.InternalPortType.MEOutput).toBe(Enums.InternalPortType.MEOutput);
+    expect(Local.SourceAvailability.All).toBe(Enums.SourceAvailability.All);
+    expect(Local.SourceAvailability.Auxiliary1).toBe(Enums.SourceAvailability.Auxiliary1);
+    expect(Local.SourceAvailability.WebcamOut).toBe(Enums.SourceAvailability.WebcamOut);
+    expect(Local.SourceAvailability.KeySource).toBe(Enums.SourceAvailability.KeySource);
+    expect(Local.MeAvailability.All).toBe(Enums.MeAvailability.All);
+    expect(Local.MeAvailability.Me4).toBe(Enums.MeAvailability.Me4);
+    expect(Local.ExternalPortType.RJ45).toBe(Enums.ExternalPortType.RJ45);
+    expect(Local.ExternalPortType.SDI).toBe(Enums.ExternalPortType.SDI);
+    expect(Local.ExternalPortType.HDMI).toBe(Enums.ExternalPortType.HDMI);
+  });
+});
+
+describe('applyRouteToState', () => {
+  // The browser simulator has no hardware to ask, so this is what "the switcher
+  // accepted it" means there. It must move exactly the field the reader reads.
+  it('moves what readRoute then reports, for every kind of destination', () => {
+    const state = twoMeState();
+    const destinations = buildDestinations(state);
+    for (const destination of destinations) {
+      // The SuperSource art sources are the fixture's deliberate gap: the state
+      // has no properties block, which the next case covers.
+      if (destination.kind === 'ssrcArtFill' || destination.kind === 'ssrcArtKey') continue;
+      applyRouteToState(state, destination, 2);
+      expect(readRoute(state, destination), destination.id).toBe(2);
+    }
+  });
+
+  it('ignores a destination the state has no slot for, as a switcher does', () => {
+    const state = twoMeState();
+    const phantom = { ...find(buildDestinations(state), 'dsk.0.fill'), address: { unit: 9 } };
+    expect(() => applyRouteToState(state, phantom, 2)).not.toThrow();
   });
 });

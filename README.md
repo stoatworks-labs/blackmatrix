@@ -91,6 +91,27 @@ all keyed on it. Removing a device leaves salvos and ties that reference it
 alone rather than rewriting them, and says which ones: an operator who pulls a
 switcher out for an hour should get their salvos back when it returns.
 
+## The hosted simulator
+
+```bash
+npm run sim          # locally, on :5183
+npm run sim:build    # static build in packages/web/dist-sim
+```
+
+A build of the same UI that simulates its devices **in the browser tab**, with a
+model list covering the ATEM and Videohub ranges. It is a demo and says so on
+every screen: nothing is on a network, nothing is being controlled, and no web
+page can reach this hardware — the ATEM protocol is UDP, the Videohub protocol
+is raw TCP, and the emulation this app offers panels has to *listen* on a port.
+A browser can do none of those things.
+
+It is not a reimplementation. The simulator builds a real `AtemState` and runs it
+through the same matrix model, the same legality rules and the same grid as the
+live app, so what it shows is what the app would show. What it cannot be is
+*accurate about a model*: the names are Blackmagic's, and only the entries marked
+as read off hardware carry real numbers. Everything else is an approximate shape
+for that class of device, and a capture replaces it with the truth.
+
 ## Configuration
 
 ```jsonc

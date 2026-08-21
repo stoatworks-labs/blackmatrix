@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { CATALOGUE, FAMILIES } from '../simulator/catalogue';
 import type { DeviceInput, DeviceView, DiscoverResult, FoundDevice } from '../types';
 
 interface DevicesPageProps {
   devices: DeviceView[];
+  /** Present in the simulator: devices are chosen from a model list. */
+  onAddFromCatalogue?: (entryId: string, name?: string) => Promise<void>;
   onAdd: (device: DeviceInput) => Promise<void>;
   onUpdate: (id: string, patch: Partial<DeviceInput>) => Promise<void>;
   onRemove: (id: string) => Promise<string[]>;
@@ -19,7 +22,16 @@ const BLANK: DeviceInput = { id: '', name: '', address: '', type: 'atem' };
  * poor answer on a laptop and no answer at all inside a container, where the
  * config lives on a mounted volume the operator may not have a shell on.
  */
-export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, onDiscover }: DevicesPageProps) {
+export function DevicesPage({
+  devices,
+  onAdd,
+  onUpdate,
+  onRemove,
+  onReconnect,
+  onDiscover,
+  onAddFromCatalogue,
+}: DevicesPageProps) {
+  const simulated = Boolean(onAddFromCatalogue);
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -53,9 +65,11 @@ export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, o
         <header className="devices-head">
           <h2>Devices</h2>
           <div>
-            <button type="button" onClick={runScan} disabled={scanning}>
-              {scanning ? 'Scanning…' : 'Scan network'}
-            </button>
+            {simulated ? null : (
+              <button type="button" onClick={runScan} disabled={scanning}>
+                {scanning ? 'Scanning…' : 'Scan network'}
+              </button>
+            )}
             <button
               type="button"
               className="primary"
@@ -69,7 +83,15 @@ export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, o
           </div>
         </header>
 
-        {adding ? (
+        {adding && simulated ? (
+          <CatalogueForm
+            onCancel={() => setAdding(false)}
+            onAdd={async (entryId, name) => {
+              await onAddFromCatalogue?.(entryId, name);
+              setAdding(false);
+            }}
+          />
+        ) : adding ? (
           <DeviceForm
             key={prefill.address || 'blank'}
             initial={prefill}
@@ -124,9 +146,11 @@ export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, o
                     </span>
                   </div>
                   <div className="device-actions">
-                    <button type="button" onClick={() => void onReconnect(device.id)}>
-                      Reconnect
-                    </button>
+                    {simulated ? null : (
+                      <button type="button" onClick={() => void onReconnect(device.id)}>
+                        Reconnect
+                      </button>
+                    )}
                     <button type="button" onClick={() => setEditing(device.id)}>
                       Edit
                     </button>
@@ -146,7 +170,13 @@ export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, o
               )}
             </li>
           ))}
-          {devices.length === 0 ? <li className="empty">No devices yet — scan, or add one by address.</li> : null}
+          {devices.length === 0 ? (
+            <li className="empty">
+              {simulated
+                ? 'No virtual devices yet — add one from the model list.'
+                : 'No devices yet — scan, or add one by address.'}
+            </li>
+          ) : null}
         </ul>
       </section>
 
@@ -195,6 +225,67 @@ export function DevicesPage({ devices, onAdd, onUpdate, onRemove, onReconnect, o
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Picking a virtual device. The model list carries where its numbers came from,
+ * because "ATEM Constellation 8K" in a demo is a shape of roughly that size, not
+ * a specification — and the one entry that *was* read off hardware should be
+ * distinguishable from the ones that were not.
+ */
+function CatalogueForm({
+  onAdd,
+  onCancel,
+}: {
+  onAdd: (entryId: string, name?: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [entryId, setEntryId] = useState(CATALOGUE[0]?.id ?? '');
+  const [name, setName] = useState('');
+  const entry = CATALOGUE.find((candidate) => candidate.id === entryId);
+
+  return (
+    <form
+      className="device-form"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        await onAdd(entryId, name);
+      }}
+    >
+      <label>
+        <span>Model</span>
+        <select value={entryId} onChange={(event) => setEntryId(event.target.value)}>
+          {FAMILIES.map((family) => (
+            <optgroup key={family} label={family}>
+              {CATALOGUE.filter((candidate) => candidate.family === family).map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <small>
+          {entry?.provenance === 'capture'
+            ? '✓ Shape read off real hardware.'
+            : 'Approximate shape for this class of device — not a specification.'}
+          {entry?.note ? ` ${entry.note}` : ''}
+        </small>
+      </label>
+      <label>
+        <span>Name it</span>
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder={entry?.name ?? ''} />
+      </label>
+      <div className="device-form-actions">
+        <button type="submit" className="primary">
+          Add
+        </button>
+        <button type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 

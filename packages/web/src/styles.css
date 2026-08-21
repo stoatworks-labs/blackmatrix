@@ -523,3 +523,22 @@ main > .empty code { color: var(--routed); }
   font-size: 12px;
 }
 .view-tabs { display: flex; gap: 5px; margin-left: auto; align-self: center; }
+
+/* ---- the demo banner ---- */
+
+.demo-banner {
+  padding: 9px 16px;
+  background: repeating-linear-gradient(
+    45deg,
+    #3a2f10,
+    #3a2f10 12px,
+    #33290e 12px,
+    #33290e 24px
+  );
+  border-bottom: 2px solid var(--routed);
+  color: #ffe2a8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.demo-banner strong { color: var(--routed); text-transform: uppercase; letter-spacing: 0.06em; }
+.demo-why { color: #d8c49a; }

@@ -1,14 +1,9 @@
 import { EventEmitter } from 'node:events';
 import { VideohubClient, type LockAction, type VideohubState } from '@av/videohub';
-import type { Destination, MatrixModel, Section, Source } from '@av/atem-matrix';
+import { buildRouterMatrix, type Destination, type MatrixModel } from '@av/atem-matrix';
 import type { DeviceConfig } from '../config.js';
 import { log } from '../log.js';
 import type { ConnectionState, RoutableDevice } from '../atem/device.js';
-
-const SECTIONS: Section[] = [
-  { id: 'outputs', label: 'Outputs', hint: 'Router video outputs' },
-  { id: 'monitoring', label: 'Monitoring outputs', hint: 'The router’s monitoring outputs' },
-];
 
 /**
  * A real Blackmagic Videohub, as a device in the same fleet as the switchers.
@@ -67,57 +62,15 @@ export class VideohubDevice extends EventEmitter implements RoutableDevice {
   buildMatrix(): MatrixModel | null {
     const state = this.client.state;
     if (!state) return null;
-
-    const sources: Source[] = state.inputLabels.map((label, index) => ({
-      id: index,
-      label: label || `Input ${index + 1}`,
-      short: shorten(label || `In ${index + 1}`),
-      kind: 'router',
-      // A Videohub crosspoint has no availability rules; `accepts: 'any'` on the
-      // destinations is what actually decides, and these are here so the shape
-      // matches what the rest of the app expects.
-      availability: 0xff,
-      meAvailability: 0xff,
-    }));
-
-    const destinations: Destination[] = [];
-    state.outputLabels.forEach((label, index) => {
-      destinations.push({
-        id: `out.${index}`,
-        kind: 'routerOutput',
-        section: 'outputs',
-        label: label || `Output ${index + 1}`,
-        short: shorten(label || `Out ${index + 1}`),
-        address: { unit: index },
-        accepts: 'any',
-      });
+    // The same builder the simulator uses, so a simulated router and a real one
+    // are the same thing to everything above this.
+    return buildRouterMatrix({
+      inputLabels: state.inputLabels,
+      outputLabels: state.outputLabels,
+      monitoringLabels: state.monitoringLabels,
+      routing: state.routing,
+      monitoringRouting: state.monitoringRouting,
     });
-    state.monitoringLabels.forEach((label, index) => {
-      destinations.push({
-        id: `mon.${index}`,
-        kind: 'routerMonitoring',
-        section: 'monitoring',
-        label: label || `Monitor ${index + 1}`,
-        short: shorten(label || `Mon ${index + 1}`),
-        address: { unit: index },
-        accepts: 'any',
-      });
-    });
-
-    const routes: Record<string, number> = {};
-    destinations.forEach((destination) => {
-      const table = destination.kind === 'routerMonitoring' ? state.monitoringRouting : state.routing;
-      routes[destination.id] = table[destination.address.unit] ?? -1;
-    });
-
-    return {
-      sections: SECTIONS.filter((section) =>
-        destinations.some((destination) => destination.section === section.id),
-      ),
-      sources,
-      destinations,
-      routes,
-    };
   }
 
   async route(destination: Destination, source: number): Promise<void> {
@@ -168,8 +121,4 @@ function describeLock(letter: string | undefined): string | null {
 function splitHostPort(address: string): [string, number] {
   const match = /^(.*?)(?::(\d+))?$/.exec(address.trim());
   return [match?.[1] || address, match?.[2] ? Number(match[2]) : 9990];
-}
-
-function shorten(label: string): string {
-  return label.length <= 8 ? label : label.slice(0, 8);
 }

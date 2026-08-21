@@ -10,3 +10,4 @@ atem-crosspoint.config.json
 # redacted on the way out, but the rest is still someone's show.
 captures/
 *.tsbuildinfo
+dist-sim/

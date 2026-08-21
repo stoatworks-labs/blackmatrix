@@ -1,4 +1,5 @@
-import { Enums, type AtemState } from 'atem-connection';
+import type { AtemState } from 'atem-connection';
+import { InternalPortType } from './enums.js';
 import {
   ATEM_SECTIONS,
   type Destination,
@@ -20,7 +21,7 @@ function auxOutputNames(state: AtemState): string[] {
   const names: string[] = [];
   for (const key of Object.keys(state.inputs)) {
     const input = state.inputs[Number(key)];
-    if (input?.internalPortType === Enums.InternalPortType.Auxiliary) {
+    if (input?.internalPortType === InternalPortType.Auxiliary) {
       names.push(input.longName || '');
     }
   }
@@ -41,28 +42,28 @@ function counts(state: AtemState) {
   };
 }
 
-function classifySource(portType: Enums.InternalPortType): SourceKind {
+function classifySource(portType: number): SourceKind {
   switch (portType) {
-    case Enums.InternalPortType.External:
-    case Enums.InternalPortType.ExternalDirect:
+    case InternalPortType.External:
+    case InternalPortType.ExternalDirect:
       return 'input';
-    case Enums.InternalPortType.Black:
+    case InternalPortType.Black:
       return 'black';
-    case Enums.InternalPortType.ColorBars:
+    case InternalPortType.ColorBars:
       return 'bars';
-    case Enums.InternalPortType.ColorGenerator:
+    case InternalPortType.ColorGenerator:
       return 'colour';
-    case Enums.InternalPortType.MediaPlayerFill:
+    case InternalPortType.MediaPlayerFill:
       return 'mediaPlayer';
-    case Enums.InternalPortType.MediaPlayerKey:
+    case InternalPortType.MediaPlayerKey:
       return 'mediaPlayerKey';
-    case Enums.InternalPortType.SuperSource:
+    case InternalPortType.SuperSource:
       return 'supersource';
-    case Enums.InternalPortType.MEOutput:
+    case InternalPortType.MEOutput:
       return 'meOutput';
-    case Enums.InternalPortType.Auxiliary:
+    case InternalPortType.Auxiliary:
       return 'aux';
-    case Enums.InternalPortType.MultiViewer:
+    case InternalPortType.MultiViewer:
       return 'multiview';
     default:
       return 'other';
@@ -79,8 +80,8 @@ export function buildSources(state: AtemState): Source[] {
     const input = state.inputs[Number(key)];
     if (!input) continue;
     const external =
-      input.internalPortType === Enums.InternalPortType.External ||
-      input.internalPortType === Enums.InternalPortType.ExternalDirect;
+      input.internalPortType === InternalPortType.External ||
+      input.internalPortType === InternalPortType.ExternalDirect;
 
     sources.push({
       id: input.inputId,

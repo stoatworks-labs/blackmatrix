@@ -1,0 +1,16 @@
+# The hosted simulator — a Worker that serves a static build and nothing else.
+#
+# There is no server-side code here, and there cannot be anything useful: the
+# simulator's whole point is that a browser cannot reach a switcher or a router.
+# The ATEM protocol is UDP, the Videohub protocol is raw TCP, and the emulation
+# this app offers panels has to *listen* on a port, which a web page cannot do
+# at all. So the hosted build simulates devices in the tab and says so, loudly.
+#
+# Build with `npm run sim:build`, publish with `cf-run npx wrangler deploy`.
+name = "atem-crosspoint"
+compatibility_date = "2026-08-21"
+
+[assets]
+directory = "./packages/web/dist-sim"
+# Deep links and reloads land on the app rather than a 404.
+not_found_handling = "single-page-application"

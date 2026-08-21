@@ -20,6 +20,8 @@ export interface FleetApi {
   discover: () => Promise<DiscoverResult>;
   notice: string | null;
   clearNotice: () => void;
+  /** Simulator only: devices come from a model list, not from an address. */
+  addFromCatalogue?: (entryId: string, name?: string) => Promise<void>;
 }
 
 async function request<T>(path: string, method: string, body?: unknown): Promise<T> {
