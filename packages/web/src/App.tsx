@@ -4,6 +4,7 @@ import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { useFleet } from './useFleet';
+import { useTakeState, type UndoEntry } from './takeState';
 import { useSimulatorFleet } from './simulator/useSimulatorFleet';
 import type { Destination } from './types';
 
@@ -19,6 +20,7 @@ export function App() {
   const api = useFleetImpl();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<'matrix' | 'devices' | 'sources'>('matrix');
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [builder, setBuilder] = useState<BuilderEntry[]>([]);
 
@@ -49,6 +51,66 @@ export function App() {
       cancelled = true;
     };
   }, [view]);
+
+  const take = useTakeState(api.snapshot);
+
+  /**
+   * A crosspoint click. In live mode it goes now; in preset mode it joins the
+   * take. Either way what it replaced is recorded, so undo has somewhere to
+   * put things back to.
+   */
+  const onRoute = (destination: string, source: number): void => {
+    if (!device) return;
+    if (take.mode === 'preset') {
+      take.stage(device.id, destination, source);
+      return;
+    }
+    const from = take.liveSource(device.id, destination);
+    void api.route(device.id, destination, source);
+    take.remember([{ deviceId: device.id, destination, source, from }]);
+  };
+
+  const onTake = async (): Promise<void> => {
+    const entries = take.stagedList;
+    if (entries.length === 0) return;
+    const undo: UndoEntry[] = entries.map((entry) => ({
+      ...entry,
+      from: take.liveSource(entry.deviceId, entry.destination),
+    }));
+    await api.take(entries);
+    take.remember(undo);
+    take.clear();
+  };
+
+  /**
+   * Undo puts back what the last change replaced — but only where that change
+   * is still the thing on air. If a destination has moved since, by another
+   * operator or a panel, undoing would be overwriting a decision nobody asked
+   * about, so those are skipped and named.
+   */
+  const onUndo = async (): Promise<void> => {
+    const batch = take.popUndo();
+    if (!batch) return;
+    const nameOf = (deviceId: string, destinationId: string): string => {
+      const target = devices.find((candidate) => candidate.id === deviceId);
+      const destination = target?.matrix?.destinations.find((candidate) => candidate.id === destinationId);
+      return destination?.label ?? destinationId;
+    };
+
+    const stale: string[] = [];
+    const restore = batch.filter((entry) => {
+      if (take.liveSource(entry.deviceId, entry.destination) === entry.source) return true;
+      stale.push(nameOf(entry.deviceId, entry.destination));
+      return false;
+    });
+    if (restore.length > 0) {
+      await api.take(restore.map((entry) => ({ ...entry, source: entry.from })));
+    }
+    if (stale.length > 0) {
+      setStaleNotice(`Left alone, changed since: ${stale.join(', ')}`);
+      window.setTimeout(() => setStaleNotice(null), 6000);
+    }
+  };
 
   const salvoMembers = useMemo(
     () => new Set(builder.map((entry) => `${entry.deviceId}:${entry.destination}`)),
@@ -106,6 +168,54 @@ export function App() {
           ))}
           {devices.length === 0 ? <span className="none">No devices yet</span> : null}
         </nav>
+        {view === 'matrix' ? (
+          <div className={`take-bar ${take.mode}`}>
+            <div className="mode-switch" role="group" aria-label="Routing mode">
+              <button
+                type="button"
+                className={take.mode === 'live' ? 'on live' : ''}
+                onClick={() => take.setMode('live')}
+                title="Every crosspoint happens the moment you click it"
+              >
+                Live
+              </button>
+              <button
+                type="button"
+                className={take.mode === 'preset' ? 'on preset' : ''}
+                onClick={() => take.setMode('preset')}
+                title="Stage crosspoints and apply them together on Take"
+              >
+                Preset
+              </button>
+            </div>
+            <button
+              type="button"
+              className="take-button"
+              disabled={take.stagedList.length === 0}
+              onClick={() => void onTake()}
+              title="Apply every staged crosspoint at once"
+            >
+              Take{take.stagedList.length > 0 ? ` ${take.stagedList.length}` : ''}
+            </button>
+            <button
+              type="button"
+              disabled={take.stagedList.length === 0}
+              onClick={take.clear}
+              title="Discard everything staged"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              disabled={take.undoDepth === 0}
+              onClick={() => void onUndo()}
+              title="Put back what the last change replaced"
+            >
+              Undo{take.undoDepth > 0 ? ` ${take.undoDepth}` : ''}
+            </button>
+          </div>
+        ) : null}
+
         <div className="view-tabs">
           <button
             type="button"
@@ -134,6 +244,11 @@ export function App() {
       </header>
 
       {api.error ? <div className="error">{api.error}</div> : null}
+      {staleNotice ? (
+        <div className="notice" onClick={() => setStaleNotice(null)} role="status">
+          {staleNotice}
+        </div>
+      ) : null}
       {api.notice ? (
         <div className="notice" onClick={api.clearNotice} role="status">
           {api.notice}
@@ -165,7 +280,10 @@ export function App() {
           <Matrix
             device={device}
             salvoMembers={salvoMembers}
-            onRoute={(destination, source) => void api.route(device.id, destination, source)}
+            mode={take.mode}
+            staged={take.staged}
+            onRoute={onRoute}
+            onUnstage={(destination) => take.unstage(device.id, destination)}
             onLock={(destination, action) => void api.lock(device.id, destination, action)}
             onRename={(destination, label) => void api.labelDestination(device.id, destination, label)}
             onAddToSalvo={building ? addToSalvo : null}

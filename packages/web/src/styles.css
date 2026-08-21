@@ -557,3 +557,78 @@ main > .empty code { color: var(--routed); }
   color: var(--routed);
   font-size: 10px;
 }
+
+/* ---- live / preset and the take controls ---- */
+
+.take-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+}
+/* Preset is a different way of working, so it looks different at a glance —
+   the point of the mode is that a click no longer goes to air. */
+.take-bar.preset { border-color: var(--routed); box-shadow: 0 0 0 1px rgba(255, 176, 32, 0.25); }
+
+.mode-switch { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.mode-switch button {
+  padding: 5px 11px;
+  background: transparent;
+  border: 0;
+  color: var(--dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.mode-switch button.on.live { background: #16261a; color: var(--ok); }
+.mode-switch button.on.preset { background: #2a2413; color: var(--routed); }
+
+.take-bar > button {
+  padding: 5px 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.take-bar > button:disabled { opacity: 0.35; cursor: not-allowed; }
+.take-bar > button.take-button:not(:disabled) {
+  background: var(--routed);
+  border-color: var(--routed);
+  color: #1a1206;
+  font-weight: 700;
+}
+
+/* A staged crosspoint is outlined, never filled: filled means on air. */
+.cell.staged { box-shadow: inset 0 0 0 2px var(--routed); }
+.pending {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--routed);
+  border-radius: 2px;
+}
+.pending.small { width: 8px; height: 8px; border-width: 2px; }
+.cell.stub.holds-staged { background: #201a10; }
+
+.rowhead.has-staged { border-left-color: var(--routed); }
+.rowhead-staged {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--routed);
+  font-size: 10px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.rowhead-staged .arrow { color: var(--dim); }

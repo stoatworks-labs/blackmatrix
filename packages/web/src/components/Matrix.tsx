@@ -2,11 +2,17 @@ import { Fragment, memo, useMemo, useState } from 'react';
 import { isLegal } from '../availability';
 import { groupSources, type GroupedSources } from '../sourceGroups';
 import { useViewState } from '../useViewState';
+import type { Crosspoint, RouteMode } from '../takeState';
 import type { DeviceView, Destination, Source } from '../types';
 
 interface MatrixProps {
   device: DeviceView;
+  /** Live routes on click; preset stages for the next take. */
+  mode: RouteMode;
+  /** Staged crosspoints across the whole fleet, keyed `deviceId:destination`. */
+  staged: Record<string, Crosspoint>;
   onRoute: (destination: string, source: number) => void;
+  onUnstage: (destination: string) => void;
   onLock: (destination: string, action: 'lock' | 'unlock' | 'force') => void;
   onRename: (destination: string, label: string) => void;
   onAddToSalvo: ((destination: Destination) => void) | null;
@@ -22,6 +28,8 @@ type Column = { kind: 'source'; source: Source; group: GroupedSources } | { kind
 
 interface CellProps {
   routed: boolean;
+  /** Waiting for a take. Outlined, never filled: it is not on air yet. */
+  staged: boolean;
   legal: boolean;
   crosshair: boolean;
   title: string;
@@ -29,9 +37,10 @@ interface CellProps {
 }
 
 /** Memoised so hovering redraws two lines of cells, not the whole grid. */
-const Cell = memo(function Cell({ routed, legal, crosshair, title, onClick }: CellProps) {
+const Cell = memo(function Cell({ routed, staged, legal, crosshair, title, onClick }: CellProps) {
   const classes = ['cell'];
   if (routed) classes.push('routed');
+  if (staged) classes.push('staged');
   if (!legal) classes.push('blocked');
   if (crosshair) classes.push('crosshair');
   return (
@@ -44,11 +53,22 @@ const Cell = memo(function Cell({ routed, legal, crosshair, title, onClick }: Ce
       aria-pressed={routed}
     >
       {routed ? <span className="tally" /> : null}
+      {staged && !routed ? <span className="pending" /> : null}
     </button>
   );
 });
 
-export function Matrix({ device, onRoute, onLock, onRename, onAddToSalvo, salvoMembers }: MatrixProps) {
+export function Matrix({
+  device,
+  mode,
+  staged,
+  onRoute,
+  onUnstage,
+  onLock,
+  onRename,
+  onAddToSalvo,
+  salvoMembers,
+}: MatrixProps) {
   const [hoverColumn, setHoverColumn] = useState<number | null>(null);
   const [hoverRow, setHoverRow] = useState<string | null>(null);
   const { view, toggleGroup, toggleSection, setAllGroups } = useViewState();
@@ -101,7 +121,7 @@ export function Matrix({ device, onRoute, onLock, onRename, onAddToSalvo, salvoM
     .reduce((total, entry) => total + entry.sources.length, 0);
 
   return (
-    <div className="matrix-scroll">
+    <div className={`matrix-scroll mode-${mode}`}>
       <div
         className="matrix"
         style={{ gridTemplateColumns: template }}
@@ -206,6 +226,11 @@ export function Matrix({ device, onRoute, onLock, onRename, onAddToSalvo, salvoM
                           routedSource?.label ?? (routedSourceId < 0 ? 'unknown' : `source ${routedSourceId}`)
                         }
                         owner={device.locks[destination.id] ?? null}
+                        stagedSource={staged[`${device.id}:${destination.id}`]?.source ?? null}
+                        stagedLabel={
+                          sourceById.get(staged[`${device.id}:${destination.id}`]?.source ?? -1)?.label ?? null
+                        }
+                        onUnstage={onUnstage}
                         rowHot={hoverRow === destination.id}
                         hoverColumn={hoverColumn}
                         inSalvo={salvoMembers.has(`${device.id}:${destination.id}`)}
@@ -235,6 +260,9 @@ interface RowProps {
   routedSourceId: number;
   routedLabel: string;
   owner: string | null;
+  stagedSource: number | null;
+  stagedLabel: string | null;
+  onUnstage: (destination: string) => void;
   rowHot: boolean;
   hoverColumn: number | null;
   inSalvo: boolean;
@@ -252,6 +280,9 @@ function Row({
   routedSourceId,
   routedLabel,
   owner,
+  stagedSource,
+  stagedLabel,
+  onUnstage,
   rowHot,
   hoverColumn,
   inSalvo,
@@ -265,7 +296,11 @@ function Row({
   const locked = owner !== null;
   return (
     <>
-      <div className={`rowhead kind-${destination.kind}${rowHot ? ' hot' : ''}${locked ? ' locked' : ''}`}>
+      <div
+        className={`rowhead kind-${destination.kind}${rowHot ? ' hot' : ''}${locked ? ' locked' : ''}${
+          stagedSource !== null ? ' has-staged' : ''
+        }`}
+      >
         <div className="rowhead-main">
           <button
             type="button"
@@ -283,9 +318,20 @@ function Row({
               </span>
             ) : null}
           </button>
-          <span className="rowhead-source" title={`Currently taking ${routedLabel}`}>
-            {routedLabel}
-          </span>
+          {stagedSource !== null ? (
+            <button
+              type="button"
+              className="rowhead-staged"
+              title={`Staged: ${stagedLabel ?? stagedSource}. Click to drop it from the take.`}
+              onClick={() => onUnstage(destination.id)}
+            >
+              {routedLabel} <span className="arrow">→</span> {stagedLabel ?? stagedSource}
+            </button>
+          ) : (
+            <span className="rowhead-source" title={`Currently taking ${routedLabel}`}>
+              {routedLabel}
+            </span>
+          )}
         </div>
         <div className="rowhead-tools">
           {onAddToSalvo ? (
@@ -314,11 +360,12 @@ function Row({
           // A folded group still has to answer "is my route in there?", or
           // folding turns a visible crosspoint into a missing one.
           const holdsRoute = column.group.sources.some((source) => source.id === routedSourceId);
+          const holdsStaged = column.group.sources.some((source) => source.id === stagedSource);
           return (
             <button
               type="button"
               key={`stub-${column.group.group.id}`}
-              className={`cell stub${holdsRoute ? ' holds' : ''}`}
+              className={`cell stub${holdsRoute ? ' holds' : ''}${holdsStaged ? ' holds-staged' : ''}`}
               title={
                 holdsRoute
                   ? `${routedLabel} is inside ${column.group.group.label} — click to unfold`
@@ -327,6 +374,7 @@ function Row({
               onClick={() => onUnfold(column.group.group.id)}
             >
               {holdsRoute ? <span className="tally small" /> : null}
+              {holdsStaged && !holdsRoute ? <span className="pending small" /> : null}
             </button>
           );
         }
@@ -338,6 +386,7 @@ function Row({
           >
             <Cell
               routed={column.source.id === routedSourceId}
+              staged={column.source.id === stagedSource}
               legal={isLegal(column.source, destination)}
               crosshair={rowHot || hoverColumn === columnIndex}
               title={`${column.source.label} → ${destination.label}`}

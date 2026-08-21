@@ -124,6 +124,9 @@ export function SourcesPage({ device, onSetPort, onRename }: SourcesPageProps) {
             </li>
           ))}
         </ul>
+
+        {/* The support footer follows whichever page can hold it. See App.tsx. */}
+        <div id="support-slot" />
       </section>
     </div>
   );

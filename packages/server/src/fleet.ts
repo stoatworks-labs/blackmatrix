@@ -481,6 +481,30 @@ export class Fleet extends EventEmitter {
     }
   }
 
+  /**
+   * Apply a set of crosspoints as one operation.
+   *
+   * This is what a router's TAKE does: the operator has decided on several
+   * changes and wants them to happen together, not as a visible sequence. They
+   * are still applied one at a time — no switcher accepts a batch — but nothing
+   * between them can interleave from this process, and a refusal does not stop
+   * the rest, because a take that half-happens and then stops is worse than one
+   * that half-happens and says which half.
+   */
+  async routeBatch(
+    crosspoints: Array<{ deviceId: string; destination: string; source: number }>,
+    client: string,
+  ): Promise<{ ok: boolean; applied: number; failures: string[] }> {
+    const failures: string[] = [];
+    let applied = 0;
+    for (const crosspoint of crosspoints) {
+      const result = await this.route(crosspoint.deviceId, crosspoint.destination, crosspoint.source, client);
+      if (result.ok) applied++;
+      else failures.push(`${crosspoint.deviceId}/${crosspoint.destination}: ${result.reason}`);
+    }
+    return { ok: failures.length === 0, applied, failures };
+  }
+
   /** Assign an input to a plug. Refused when the device has no such notion. */
   async setInputPort(deviceId: string, inputId: number, externalPortType: number): Promise<RouteResult> {
     const entry = this.entries.get(deviceId);

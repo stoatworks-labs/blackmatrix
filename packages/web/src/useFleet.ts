@@ -16,6 +16,8 @@ export interface FleetApi {
   removeDevice: (id: string) => Promise<string[]>;
   reconnectDevice: (id: string) => Promise<void>;
   setInputPort: (deviceId: string, input: number, externalPortType: number) => Promise<void>;
+  /** Apply several crosspoints as one take. */
+  take: (crosspoints: Array<{ deviceId: string; destination: string; source: number }>) => Promise<void>;
   setSourceLabel: (deviceId: string, source: number, label: string) => Promise<void>;
   discover: () => Promise<DiscoverResult>;
   notice: string | null;
@@ -129,6 +131,7 @@ export function useFleet(): FleetApi {
     reconnectDevice: (id) => guard(() => post(`/api/devices/${id}/reconnect`)),
     setInputPort: (deviceId, input, externalPortType) =>
       guard(() => post(`/api/devices/${deviceId}/input`, { input, externalPortType })),
+    take: (crosspoints) => guard(() => post('/api/take', { crosspoints })),
     setSourceLabel: (deviceId, source, label) =>
       guard(() => post(`/api/devices/${deviceId}/label`, { source, label })),
     discover: async () => {

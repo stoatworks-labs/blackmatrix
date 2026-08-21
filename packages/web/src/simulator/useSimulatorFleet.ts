@@ -51,6 +51,14 @@ export function useSimulatorFleet(): FleetApi {
       setNotice('Nothing to reconnect to — these devices are simulated in this tab.');
     },
     setInputPort: async (deviceId, input, port) => report(fleet.setInputPort(deviceId, input, port)),
+    take: async (crosspoints) => {
+      const failures: string[] = [];
+      for (const crosspoint of crosspoints) {
+        const result = fleet.route(crosspoint.deviceId, crosspoint.destination, crosspoint.source);
+        if (!result.ok) failures.push(`${crosspoint.destination}: ${result.reason}`);
+      }
+      setError(failures.length > 0 ? failures.join('; ') : null);
+    },
     setSourceLabel: async (deviceId, source, label) => fleet.setSourceLabel(deviceId, source, label),
     // A demo must not sweep somebody's network, and from a browser it could not
     // anyway: there is no raw socket to sweep with.

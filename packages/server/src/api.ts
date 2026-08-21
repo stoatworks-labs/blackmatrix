@@ -86,6 +86,19 @@ export function createApp(fleet: Fleet): express.Express {
     res.status(result.ok ? 200 : 409).json(result);
   });
 
+  /** A take: several crosspoints, applied together. */
+  app.post('/api/take', async (req, res) => {
+    const { crosspoints } = req.body as {
+      crosspoints?: Array<{ deviceId: string; destination: string; source: number }>;
+    };
+    if (!Array.isArray(crosspoints) || crosspoints.length === 0) {
+      res.status(400).json({ ok: false, reason: 'expected { crosspoints: [{deviceId, destination, source}] }' });
+      return;
+    }
+    const result = await fleet.routeBatch(crosspoints, clientOf(req));
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
   app.post('/api/devices/:id/lock', (req, res) => {
     const { destination, action } = req.body as { destination?: string; action?: LockAction };
     if (typeof destination !== 'string' || !['lock', 'unlock', 'force'].includes(action ?? '')) {
