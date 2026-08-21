@@ -8,7 +8,7 @@ import type { SectionId } from './types';
  * uses, and having that survive a browser reload — or a server restart — is the
  * whole point of folding it.
  */
-const KEY = 'atem-crosspoint.view.v1';
+const KEY = 'blackmatrix.view.v1';
 
 export interface ViewState {
   openGroups: Record<string, boolean>;

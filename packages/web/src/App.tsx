@@ -57,7 +57,7 @@ export function App() {
 
       <header className="topbar">
         <div className="brand">
-          <h1>ATEM Crosspoint{SIMULATOR ? ' — Demo' : ''}</h1>
+          <h1>BlackMatrix{SIMULATOR ? ' — Demo' : ''}</h1>
           <span className={`link${api.connected ? ' up' : ''}`}>
             {SIMULATOR ? 'simulated' : api.connected ? 'live' : 'reconnecting…'}
           </span>

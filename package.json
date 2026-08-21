@@ -1,5 +1,5 @@
 {
-  "name": "atem-crosspoint",
+  "name": "blackmatrix",
   "version": "0.1.0",
   "private": true,
   "description": "Crosspoint router matrix for a fleet of Blackmagic ATEM switchers, with Videohub protocol emulation",
@@ -12,17 +12,17 @@
   ],
   "scripts": {
     "build:libs": "npm run build --workspace @av/videohub && npm run build --workspace @av/atem-matrix",
-    "dev": "npm run build:libs && npm run dev --workspace @atem-crosspoint/server",
-    "dev:mock": "npm run build:libs && npm run dev:mock --workspace @atem-crosspoint/server",
-    "dev:replay": "npm run build:libs && npm run dev --workspace @atem-crosspoint/server",
-    "dev:web": "npm run dev --workspace @atem-crosspoint/web",
-    "sim": "npm run build:libs && npm run dev:sim --workspace @atem-crosspoint/web",
-    "sim:build": "npm run build:libs && npm run build:sim --workspace @atem-crosspoint/web",
-    "build": "npm run build:libs && npm run build --workspace @atem-crosspoint/web && npm run build --workspace @atem-crosspoint/server",
-    "typecheck": "npm run build:libs && npm run typecheck --workspace @atem-crosspoint/server && npm run typecheck --workspace @atem-crosspoint/web",
+    "dev": "npm run build:libs && npm run dev --workspace @blackmatrix/server",
+    "dev:mock": "npm run build:libs && npm run dev:mock --workspace @blackmatrix/server",
+    "dev:replay": "npm run build:libs && npm run dev --workspace @blackmatrix/server",
+    "dev:web": "npm run dev --workspace @blackmatrix/web",
+    "sim": "npm run build:libs && npm run dev:sim --workspace @blackmatrix/web",
+    "sim:build": "npm run build:libs && npm run build:sim --workspace @blackmatrix/web",
+    "build": "npm run build:libs && npm run build --workspace @blackmatrix/web && npm run build --workspace @blackmatrix/server",
+    "typecheck": "npm run build:libs && npm run typecheck --workspace @blackmatrix/server && npm run typecheck --workspace @blackmatrix/web",
     "test": "npm run build:libs && vitest run",
-    "start": "npm run start --workspace @atem-crosspoint/server",
-    "capture": "npm run build:libs && npm run capture --workspace @atem-crosspoint/server --"
+    "start": "npm run start --workspace @blackmatrix/server",
+    "capture": "npm run build:libs && npm run capture --workspace @blackmatrix/server --"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

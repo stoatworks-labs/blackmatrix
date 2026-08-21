@@ -240,7 +240,7 @@ async function main(): Promise<void> {
   }
 
   const capture = {
-    format: 'atem-crosspoint-capture' as const,
+    format: 'blackmatrix-capture' as const,
     version: 1 as const,
     capturedAt: new Date().toISOString(),
     address: options.address,

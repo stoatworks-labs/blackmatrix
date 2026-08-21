@@ -64,7 +64,9 @@ export interface AppConfig {
   ties: Tie[];
 }
 
-export const CONFIG_FILENAME = 'atem-crosspoint.config.json';
+export const CONFIG_FILENAME = 'blackmatrix.config.json';
+/** What this app was called before. Read, never written. */
+const LEGACY_CONFIG_FILENAME = 'atem-crosspoint.config.json';
 
 const DEFAULTS: AppConfig = {
   port: 8533,
@@ -111,7 +113,21 @@ export const MOCK_CONFIG: AppConfig = {
 };
 
 export function configPath(): string {
-  return process.env.ATEM_CROSSPOINT_CONFIG ?? path.resolve(process.cwd(), CONFIG_FILENAME);
+  const named = process.env.BLACKMATRIX_CONFIG ?? process.env.ATEM_CROSSPOINT_CONFIG;
+  if (named) return named;
+
+  const current = path.resolve(process.cwd(), CONFIG_FILENAME);
+  if (fs.existsSync(current)) return current;
+
+  // This app used to be called ATEM Crosspoint. An existing config keeps
+  // working under its old name rather than the rename quietly emptying
+  // somebody's fleet; it is read from there and saved back there.
+  const legacy = path.resolve(process.cwd(), LEGACY_CONFIG_FILENAME);
+  if (fs.existsSync(legacy)) {
+    log.warn(`using ${LEGACY_CONFIG_FILENAME} — rename it to ${CONFIG_FILENAME} when convenient`);
+    return legacy;
+  }
+  return current;
 }
 
 export function loadConfig(): AppConfig {

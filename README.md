@@ -1,4 +1,4 @@
-# ATEM Crosspoint
+# BlackMatrix
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
 > (Anthropic), directed and reviewed by a human author. It was developed and
@@ -40,8 +40,8 @@ That serves <http://localhost:8533> with three simulated switchers of deliberate
 different shapes (1 M/E, 4 M/E, compact) and a Videohub server per switcher. No
 hardware, no network switchers, nothing to break.
 
-Against real switchers, write `atem-crosspoint.config.json` (see
-`atem-crosspoint.config.example.json`) and:
+Against real switchers, write `blackmatrix.config.json` (see
+`blackmatrix.config.example.json`) and:
 
 ```bash
 npm run build && npm start
@@ -193,8 +193,8 @@ Renaming a **source** renames the input on the switcher itself. Renaming a
 packages/
   videohub   @av/videohub    Videohub Ethernet Protocol v2.3, server AND client. Knows nothing about ATEMs.
   matrix     @av/atem-matrix Turns an AtemState into destinations, legal sources, and routing calls.
-  server     @atem-crosspoint/server  Fleet, locks, salvos, REST + websocket, one Videohub per switcher.
-  web        @atem-crosspoint/web     The grid.
+  server     @blackmatrix/server  Fleet, locks, salvos, REST + websocket, one Videohub per switcher.
+  web        @blackmatrix/web     The grid.
 ```
 
 The two libraries are portable on purpose: `@av/videohub` will put a Videohub

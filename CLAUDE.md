@@ -1,4 +1,4 @@
-# atem-crosspoint
+# blackmatrix
 
 Crosspoint router matrix over a fleet of Blackmagic ATEM switchers, plus Videohub
 Ethernet Protocol emulation so panels/Companion can drive the same crosspoints.
@@ -15,8 +15,8 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 ## Layout (packages/)
 - `videohub` — `@av/videohub`, protocol server AND client, no ATEM knowledge
 - `matrix` — `@av/atem-matrix`, AtemState → destinations/legality/routing, no I/O
-- `server` — `@atem-crosspoint/server`
-- `web` — `@atem-crosspoint/web`
+- `server` — `@blackmatrix/server`
+- `web` — `@blackmatrix/web`
 
 ## Notes
 - `build:libs` runs before server/web (the scripts do it).

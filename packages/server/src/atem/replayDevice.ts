@@ -7,7 +7,8 @@ import { StateDevice } from './stateDevice.js';
 
 /** What `npm run capture` writes. Version it: a capture outlives the code. */
 export interface CaptureFile {
-  format: 'atem-crosspoint-capture';
+  /** The second value is what captures taken before the rename carry. */
+  format: 'blackmatrix-capture' | 'atem-crosspoint-capture';
   version: 1;
   capturedAt: string;
   address: string;
@@ -27,8 +28,8 @@ export interface CaptureFile {
 
 export function readCapture(file: string): CaptureFile {
   const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as CaptureFile;
-  if (parsed.format !== 'atem-crosspoint-capture') {
-    throw new Error(`${file} is not an ATEM Crosspoint capture`);
+  if (parsed.format !== 'blackmatrix-capture' && parsed.format !== 'atem-crosspoint-capture') {
+    throw new Error(`${file} is not a BlackMatrix capture`);
   }
   if (!parsed.state?.info) throw new Error(`${file} has no switcher state in it`);
   return parsed;

@@ -1,4 +1,4 @@
-# AGENTS.md — bringing an LLM up to speed on ATEM Crosspoint
+# AGENTS.md — bringing an LLM up to speed on BlackMatrix
 
 Orientation for an AI assistant (or a new human) picking this up cold. `CLAUDE.md`
 has the short command reference; this explains the model and the traps.
@@ -15,7 +15,7 @@ crosspoints. Node/TypeScript, npm-workspaces monorepo.
 
 | Repo | Purpose |
 |---|---|
-| **atem-crosspoint** (this) | *Route* — every bus on every switcher as a router matrix, plus Videohub emulation |
+| **blackmatrix** (this) | *Route* — every bus on every switcher as a router matrix, plus Videohub emulation |
 | **atem-overseer** | *Monitor and control* a fleet from one dashboard |
 | **atem-fleet-admin** | *Provision* many switchers at once (XML export or live apply) |
 | **animATEM** | *Control one* switcher, with UVC multiview compositing |
@@ -29,8 +29,8 @@ that is not "what source is this bus taking" probably belongs in overseer.
 packages/
   videohub   @av/videohub     protocol + TCP server, zero ATEM knowledge
   matrix     @av/atem-matrix  AtemState -> destinations/sources/legality/routing calls, zero I/O
-  server     @atem-crosspoint/server
-  web        @atem-crosspoint/web
+  server     @blackmatrix/server
+  web        @blackmatrix/web
 ```
 
 **`build:libs` runs before server or web.** The dev, build and test scripts do it
@@ -61,7 +61,7 @@ declares its own sections. Only the *builders* in that package are ATEM-specific
 ```bash
 npm run dev:mock     # <- DEFAULT. Three simulated switchers AND a simulated Videohub.
 npm run capture -- <address> --name "Stage"   # take a capture off real hardware
-npm run dev          # against real switchers from atem-crosspoint.config.json
+npm run dev          # against real switchers from blackmatrix.config.json
 npm run dev:web      # UI only, proxying to a server on :8533
 npm test             # vitest: protocol codec, protocol server over real TCP, matrix model
 npm run typecheck

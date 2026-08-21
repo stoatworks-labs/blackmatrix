@@ -1,0 +1,19 @@
+{
+  "port": 8533,
+  "videohub": {
+    "enabled": true,
+    "basePort": 9994,
+    "host": "0.0.0.0"
+  },
+  "devices": [
+    {
+      "id": "mini",
+      "name": "ATEM Mini",
+      "address": "192.168.1.14",
+      "videohubPort": 9994
+    }
+  ],
+  "labels": {},
+  "salvos": [],
+  "ties": []
+}

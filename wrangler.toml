@@ -7,7 +7,7 @@
 # at all. So the hosted build simulates devices in the tab and says so, loudly.
 #
 # Build with `npm run sim:build`, publish with `cf-run npx wrangler deploy`.
-name = "atem-crosspoint"
+name = "blackmatrix"
 compatibility_date = "2026-08-21"
 
 [assets]
