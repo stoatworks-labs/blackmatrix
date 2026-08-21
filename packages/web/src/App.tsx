@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DevicesPage } from './components/DevicesPage';
+import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { useFleet } from './useFleet';
@@ -8,7 +9,7 @@ import type { Destination } from './types';
 export function App() {
   const api = useFleet();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<'matrix' | 'devices'>('matrix');
+  const [view, setView] = useState<'matrix' | 'devices' | 'sources'>('matrix');
   const [building, setBuilding] = useState(false);
   const [builder, setBuilder] = useState<BuilderEntry[]>([]);
 
@@ -60,14 +61,31 @@ export function App() {
           ))}
           {devices.length === 0 ? <span className="none">No devices yet</span> : null}
         </nav>
-        <button
-          type="button"
-          className={`view-toggle${view === 'devices' ? ' on' : ''}`}
-          onClick={() => setView((current) => (current === 'devices' ? 'matrix' : 'devices'))}
-          title="Add, edit and remove devices"
-        >
-          {view === 'devices' ? 'Back to routing' : 'Devices'}
-        </button>
+        <div className="view-tabs">
+          <button
+            type="button"
+            className={`view-toggle${view === 'matrix' ? ' on' : ''}`}
+            onClick={() => setView('matrix')}
+          >
+            Routing
+          </button>
+          <button
+            type="button"
+            className={`view-toggle${view === 'sources' ? ' on' : ''}`}
+            onClick={() => setView('sources')}
+            title="Which connector feeds each input channel"
+          >
+            Source routing
+          </button>
+          <button
+            type="button"
+            className={`view-toggle${view === 'devices' ? ' on' : ''}`}
+            onClick={() => setView('devices')}
+            title="Add, edit and remove devices"
+          >
+            Devices
+          </button>
+        </div>
       </header>
 
       {api.error ? <div className="error">{api.error}</div> : null}
@@ -78,7 +96,17 @@ export function App() {
       ) : null}
 
       <main>
-        {view === 'devices' ? (
+        {view === 'sources' ? (
+          <SourcesPage
+            device={device}
+            onSetPort={async (input, port) => {
+              if (device) await api.setInputPort(device.id, input, port);
+            }}
+            onRename={async (input, label) => {
+              if (device) await api.setSourceLabel(device.id, input, label);
+            }}
+          />
+        ) : view === 'devices' ? (
           <DevicesPage
             devices={devices}
             onAdd={api.addDevice}
@@ -107,7 +135,8 @@ export function App() {
           </div>
         )}
 
-        {view === 'devices' ? null : <SalvoPanel
+        {view === 'matrix' ? (
+          <SalvoPanel
           salvos={api.snapshot?.salvos ?? []}
           devices={devices}
           building={building}
@@ -127,8 +156,9 @@ export function App() {
             setBuilding(false);
           }}
           onTake={(id) => void api.takeSalvo(id)}
-          onDelete={(id) => void api.deleteSalvo(id)}
-        />}
+            onDelete={(id) => void api.deleteSalvo(id)}
+          />
+        ) : null}
       </main>
     </div>
   );

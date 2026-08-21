@@ -90,6 +90,24 @@ export type SourceKind =
   | 'router'
   | 'other';
 
+/**
+ * Which physical plug an input is taking, and which it could take.
+ *
+ * Present only on inputs the switcher says are external. Many models offer one
+ * option and no choice — an ATEM Mini Extreme ISO reports HDMI and nothing else
+ * on every input — while a Constellation or Television Studio can switch an
+ * input between SDI and HDMI, and newer models expose `RJ45`, the network input.
+ *
+ * The port is all the protocol offers: an SRT URL or a stream key is not
+ * settable through it, and stays in ATEM Setup.
+ */
+export interface SourcePorts {
+  /** The ExternalPortType in use. */
+  current: number;
+  /** Every ExternalPortType this input can be assigned to. */
+  available: number[];
+}
+
 export interface Source {
   /** The ATEM's own source id — sparse, and not a column index. */
   id: number;
@@ -100,6 +118,30 @@ export interface Source {
   availability: number;
   /** MeAvailability bitmask, straight off the switcher. */
   meAvailability: number;
+  /** Absent on internal sources, and on devices that have no such concept. */
+  ports?: SourcePorts;
+}
+
+/** ExternalPortType, named. The switcher sends the number. */
+export const PORT_LABELS: Record<number, string> = {
+  0: 'Unknown',
+  1: 'SDI',
+  2: 'HDMI',
+  4: 'Component',
+  8: 'Composite',
+  16: 'S-Video',
+  32: 'XLR',
+  64: 'AES/EBU',
+  128: 'RCA',
+  256: 'Internal',
+  512: 'TS jack',
+  1024: 'MADI',
+  2048: 'TRS jack',
+  4096: 'Network',
+};
+
+export function portLabel(port: number): string {
+  return PORT_LABELS[port] ?? `Port ${port}`;
 }
 
 export interface MatrixModel {

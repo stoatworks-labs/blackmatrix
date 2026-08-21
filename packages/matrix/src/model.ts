@@ -78,6 +78,10 @@ export function buildSources(state: AtemState): Source[] {
   for (const key of Object.keys(state.inputs)) {
     const input = state.inputs[Number(key)];
     if (!input) continue;
+    const external =
+      input.internalPortType === Enums.InternalPortType.External ||
+      input.internalPortType === Enums.InternalPortType.ExternalDirect;
+
     sources.push({
       id: input.inputId,
       label: input.longName || `Input ${input.inputId}`,
@@ -85,6 +89,12 @@ export function buildSources(state: AtemState): Source[] {
       kind: classifySource(input.internalPortType),
       availability: input.sourceAvailability,
       meAvailability: input.meAvailability,
+      // Only external inputs have a plug. `externalPorts` is what the switcher
+      // will accept for this input, so a model with one option shows no choice
+      // rather than a control that cannot do anything.
+      ports: external
+        ? { current: input.externalPortType, available: [...(input.externalPorts ?? [])] }
+        : undefined,
     });
   }
   sources.sort((a, b) => a.id - b.id);

@@ -509,3 +509,17 @@ main > .empty code { color: var(--routed); }
   text-decoration: underline;
 }
 .found-actions { display: flex; gap: 5px; flex: none; }
+
+.port-choice { display: flex; align-items: center; gap: 5px; }
+.port-choice.single { color: var(--dim); }
+.rename-form { display: flex; gap: 6px; align-items: center; }
+.rename-form input {
+  padding: 5px 7px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.view-tabs { display: flex; gap: 5px; margin-left: auto; align-self: center; }

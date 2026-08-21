@@ -66,4 +66,8 @@ export class RealDevice extends EventEmitter implements DeviceRunner {
   async setInputLabel(inputId: number, longName: string, shortName: string): Promise<void> {
     await this.atem.setInputSettings({ longName, shortName }, inputId);
   }
+
+  async setInputPort(inputId: number, externalPortType: number): Promise<void> {
+    await this.atem.setInputSettings({ externalPortType }, inputId);
+  }
 }

@@ -21,6 +21,11 @@ export interface Destination {
   caveat?: string;
 }
 
+export interface SourcePorts {
+  current: number;
+  available: number[];
+}
+
 export interface Source {
   id: number;
   label: string;
@@ -28,6 +33,30 @@ export interface Source {
   kind: string;
   availability: number;
   meAvailability: number;
+  /** Only on external inputs, and only on devices that have plugs at all. */
+  ports?: SourcePorts;
+}
+
+/** ExternalPortType, named. The switcher sends the number. */
+export const PORT_LABELS: Record<number, string> = {
+  0: 'Unknown',
+  1: 'SDI',
+  2: 'HDMI',
+  4: 'Component',
+  8: 'Composite',
+  16: 'S-Video',
+  32: 'XLR',
+  64: 'AES/EBU',
+  128: 'RCA',
+  256: 'Internal',
+  512: 'TS jack',
+  1024: 'MADI',
+  2048: 'TRS jack',
+  4096: 'Network',
+};
+
+export function portLabel(port: number): string {
+  return PORT_LABELS[port] ?? `Port ${port}`;
 }
 
 export interface MatrixModel {

@@ -68,6 +68,19 @@ export class StateDevice extends EventEmitter implements DeviceRunner, AtemRoute
     this.changed();
   }
 
+  /**
+   * Honours only what the switcher said it would: assigning an input to a plug
+   * it does not list is what the real one refuses, so the simulation refuses it
+   * too rather than showing a state no hardware would produce.
+   */
+  async setInputPort(inputId: number, externalPortType: number): Promise<void> {
+    const input = this.atemState.inputs[inputId];
+    if (!input) return;
+    if (!(input.externalPorts ?? []).includes(externalPortType)) return;
+    input.externalPortType = externalPortType;
+    this.changed();
+  }
+
   async setAuxSource(source: number, bus = 0): Promise<void> {
     this.atemState.video.auxilliaries[bus] = source;
     this.changed();

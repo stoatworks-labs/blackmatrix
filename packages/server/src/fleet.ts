@@ -462,6 +462,32 @@ export class Fleet extends EventEmitter {
     }
   }
 
+  /** Assign an input to a plug. Refused when the device has no such notion. */
+  async setInputPort(deviceId: string, inputId: number, externalPortType: number): Promise<RouteResult> {
+    const entry = this.entries.get(deviceId);
+    if (!entry) return { ok: false, reason: `no such device: ${deviceId}` };
+    if (!entry.runner.setInputPort) {
+      return { ok: false, reason: `${deviceId} has no assignable inputs` };
+    }
+
+    const source = entry.matrix?.sources.find((candidate) => candidate.id === inputId);
+    if (!source) return { ok: false, reason: `no such input: ${inputId}` };
+    if (!source.ports) return { ok: false, reason: `${source.label} is not an external input` };
+    if (!source.ports.available.includes(externalPortType)) {
+      return {
+        ok: false,
+        reason: `${source.label} does not accept that connector — the switcher offers ${source.ports.available.join(', ')}`,
+      };
+    }
+
+    try {
+      await entry.runner.setInputPort(inputId, externalPortType);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, reason: String(error) };
+    }
+  }
+
   get ties(): Tie[] {
     return this.config.ties;
   }

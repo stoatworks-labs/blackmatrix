@@ -23,6 +23,8 @@ export interface DeviceRunner extends EventEmitter {
   disconnect(): Promise<void>;
   /** Rename a switcher input — a Videohub client renaming an input lands here. */
   setInputLabel(inputId: number, longName: string, shortName: string): Promise<void>;
+  /** Assign an input to one of the plugs the switcher says it accepts. */
+  setInputPort(inputId: number, externalPortType: number): Promise<void>;
 }
 
 /**
@@ -46,6 +48,12 @@ export interface RoutableDevice extends EventEmitter {
   route(destination: Destination, source: number): Promise<void>;
   /** Rename a source on the device itself, where the device allows it. */
   setSourceLabel(sourceId: number, label: string): Promise<void>;
+
+  /**
+   * Assign an input to a physical plug or the network input, on devices that
+   * have such a thing. Absent on a Videohub, whose inputs are its inputs.
+   */
+  setInputPort?(inputId: number, externalPortType: number): Promise<void>;
 
   /**
    * Locks, when the device owns them. A Videohub does — locks are part of its
@@ -99,6 +107,10 @@ export class AtemRoutable extends EventEmitter implements RoutableDevice {
     // multiviewer draws, so it gets the first few characters rather than being
     // left stale.
     await this.runner.setInputLabel(sourceId, label, label.slice(0, 4));
+  }
+
+  async setInputPort(inputId: number, externalPortType: number): Promise<void> {
+    await this.runner.setInputPort(inputId, externalPortType);
   }
 
   connect(): Promise<void> {

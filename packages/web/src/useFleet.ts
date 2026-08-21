@@ -15,6 +15,8 @@ export interface FleetApi {
   updateDevice: (id: string, patch: Partial<DeviceInput>) => Promise<void>;
   removeDevice: (id: string) => Promise<string[]>;
   reconnectDevice: (id: string) => Promise<void>;
+  setInputPort: (deviceId: string, input: number, externalPortType: number) => Promise<void>;
+  setSourceLabel: (deviceId: string, source: number, label: string) => Promise<void>;
   discover: () => Promise<DiscoverResult>;
   notice: string | null;
   clearNotice: () => void;
@@ -123,6 +125,10 @@ export function useFleet(): FleetApi {
       return orphaned;
     },
     reconnectDevice: (id) => guard(() => post(`/api/devices/${id}/reconnect`)),
+    setInputPort: (deviceId, input, externalPortType) =>
+      guard(() => post(`/api/devices/${deviceId}/input`, { input, externalPortType })),
+    setSourceLabel: (deviceId, source, label) =>
+      guard(() => post(`/api/devices/${deviceId}/label`, { source, label })),
     discover: async () => {
       try {
         const result = await request<DiscoverResult>('/api/discover', 'POST', {});

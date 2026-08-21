@@ -9,6 +9,8 @@ export { isLegal, legalSources } from './validity.js';
 export { applyRoute, type AtemRouterCommands } from './apply.js';
 export {
   ATEM_SECTIONS,
+  PORT_LABELS,
+  portLabel,
   type Acceptance,
   type Destination,
   type DestinationAddress,
@@ -18,4 +20,5 @@ export {
   type SectionId,
   type Source,
   type SourceKind,
+  type SourcePorts,
 } from './types.js';

@@ -24,6 +24,13 @@ interface MockProfile {
   mediaPlayers: number;
   colourGenerators: number;
   cleanFeeds: number;
+  /**
+   * The connectors each input accepts, by input number. Most switchers offer
+   * one and no choice; the four-ME profile offers SDI/HDMI on its first inputs
+   * and SDI/network on its last, so the source-routing tab has something real to
+   * do without hardware. Invented shapes, like the rest of this file.
+   */
+  inputPorts: (input: number) => { available: Enums.ExternalPortType[]; current: Enums.ExternalPortType };
 }
 
 const PROFILES: MockProfile[] = [
@@ -41,6 +48,10 @@ const PROFILES: MockProfile[] = [
     mediaPlayers: 2,
     colourGenerators: 2,
     cleanFeeds: 1,
+    inputPorts: () => ({
+      available: [Enums.ExternalPortType.HDMI],
+      current: Enums.ExternalPortType.HDMI,
+    }),
   },
   {
     product: 'Simulated 4 M/E switcher',
@@ -56,6 +67,10 @@ const PROFILES: MockProfile[] = [
     mediaPlayers: 4,
     colourGenerators: 2,
     cleanFeeds: 2,
+    inputPorts: (input) =>
+      input > 16
+        ? { available: [Enums.ExternalPortType.SDI, Enums.ExternalPortType.RJ45], current: Enums.ExternalPortType.RJ45 }
+        : { available: [Enums.ExternalPortType.SDI, Enums.ExternalPortType.HDMI], current: Enums.ExternalPortType.SDI },
   },
   {
     product: 'Simulated compact switcher',
@@ -71,6 +86,10 @@ const PROFILES: MockProfile[] = [
     mediaPlayers: 1,
     colourGenerators: 2,
     cleanFeeds: 1,
+    inputPorts: () => ({
+      available: [Enums.ExternalPortType.HDMI],
+      current: Enums.ExternalPortType.HDMI,
+    }),
   },
 ];
 
@@ -92,14 +111,15 @@ function addInput(
   internalPortType: Enums.InternalPortType,
   availability: number,
   meAvailability: number,
+  ports?: { available: Enums.ExternalPortType[]; current: Enums.ExternalPortType },
 ): void {
   state.inputs[inputId] = {
     inputId,
     longName,
     shortName,
     areNamesDefault: true,
-    externalPorts: null,
-    externalPortType: Enums.ExternalPortType.Unknown,
+    externalPorts: ports?.available ?? null,
+    externalPortType: ports?.current ?? Enums.ExternalPortType.Internal,
     internalPortType,
     sourceAvailability: availability,
     meAvailability,
@@ -141,7 +161,16 @@ function buildState(profile: MockProfile, seed: number): AtemState {
 
   addInput(state, SOURCE_BLACK, 'Black', 'Blk', InternalPortType.Black, SourceAvailability.All, allMes);
   for (let i = 1; i <= profile.inputs; i++) {
-    addInput(state, i, `Camera ${i}`, `Cam${i}`, InternalPortType.External, SourceAvailability.All, allMes);
+    addInput(
+      state,
+      i,
+      `Camera ${i}`,
+      `Cam${i}`,
+      InternalPortType.External,
+      SourceAvailability.All,
+      allMes,
+      profile.inputPorts(i),
+    );
   }
   addInput(state, SOURCE_BARS, 'Bars', 'Bars', InternalPortType.ColorBars, SourceAvailability.All, allMes);
   for (let i = 0; i < profile.colourGenerators; i++) {

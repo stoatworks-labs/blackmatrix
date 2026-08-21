@@ -116,6 +116,17 @@ export function createApp(fleet: Fleet): express.Express {
     res.status(400).json({ ok: false, reason: 'expected a destination or a source' });
   });
 
+  /** Assign an input to a physical plug or the network input. */
+  app.post('/api/devices/:id/input', async (req, res) => {
+    const { input, externalPortType } = req.body as { input?: number; externalPortType?: number };
+    if (typeof input !== 'number' || typeof externalPortType !== 'number') {
+      res.status(400).json({ ok: false, reason: 'expected { input: number, externalPortType: number }' });
+      return;
+    }
+    const result = await fleet.setInputPort(req.params.id, input, externalPortType);
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
   app.get('/api/salvos', (_req, res) => {
     res.json(fleet.salvos);
   });
