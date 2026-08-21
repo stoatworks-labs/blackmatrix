@@ -47,6 +47,27 @@ Against real switchers, write `blackmatrix.config.json` (see
 npm run build && npm start
 ```
 
+## Download
+
+**[v0.1.1](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.1.1)** — desktop app, container, or run the server yourself.
+
+| Platform | File |
+|---|---|
+| macOS (Apple Silicon) | `BlackMatrix_0.1.1_aarch64.dmg` · `blackmatrix-0.1.1-macos-aarch64.pkg` |
+| macOS (Intel) | `BlackMatrix_0.1.1_x64.dmg` · `blackmatrix-0.1.1-macos-x86_64.pkg` |
+| Windows | `BlackMatrix_0.1.1_x64-setup.exe` |
+| Linux | `BlackMatrix_0.1.1_amd64.deb` · `BlackMatrix-0.1.1-1.x86_64.rpm` |
+| Container | `ghcr.io/stoatworks-labs/blackmatrix` |
+
+The desktop app bundles its own Node runtime — nothing else needs installing.
+**macOS builds are unsigned**, so Gatekeeper will object on first open, and
+macOS will ask for local network access on first run: say yes, or no switcher
+will be found.
+
+This repo is private, so these links are not managed by the fleet's
+`gen-downloads.py` — that only handles public repos, and its markers are
+deliberately absent here.
+
 ## Videohubs, not just switchers
 
 A real Blackmagic Videohub can be a device in the same fleet:
