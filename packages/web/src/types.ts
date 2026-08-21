@@ -55,6 +55,30 @@ export interface Salvo {
   crosspoints: Array<{ deviceId: string; destination: string; source: number }>;
 }
 
+export interface FoundDevice {
+  address: string;
+  /** An ATEM answers on both protocols; adding it as a switcher gets every bus. */
+  kinds: Array<'atem' | 'videohub'>;
+  model: string;
+  alreadyAdded: boolean;
+}
+
+export interface DiscoverResult {
+  ok: boolean;
+  subnets: string[];
+  devices: FoundDevice[];
+}
+
+/** The editable half of a device — what the devices page sends back. */
+export interface DeviceInput {
+  id: string;
+  name: string;
+  address: string;
+  type?: 'atem' | 'videohub';
+  videohubPort?: number;
+  capture?: string;
+}
+
 export interface FleetSnapshot {
   devices: DeviceView[];
   salvos: Salvo[];

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FleetSnapshot } from './types';
+import type { DeviceInput, DiscoverResult, FleetSnapshot } from './types';
 
 export interface FleetApi {
   snapshot: FleetSnapshot | null;
@@ -11,6 +11,26 @@ export interface FleetApi {
   saveSalvo: (salvo: { id?: string; name: string; crosspoints: FleetSnapshot['salvos'][number]['crosspoints'] }) => Promise<void>;
   deleteSalvo: (id: string) => Promise<void>;
   takeSalvo: (id: string) => Promise<void>;
+  addDevice: (device: DeviceInput) => Promise<void>;
+  updateDevice: (id: string, patch: Partial<DeviceInput>) => Promise<void>;
+  removeDevice: (id: string) => Promise<string[]>;
+  reconnectDevice: (id: string) => Promise<void>;
+  discover: () => Promise<DiscoverResult>;
+  notice: string | null;
+  clearNotice: () => void;
+}
+
+async function request<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => ({}))) as T & { reason?: string; failures?: string[] };
+  if (!response.ok) {
+    throw new Error(payload.reason ?? payload.failures?.join('; ') ?? `request failed (${response.status})`);
+  }
+  return payload;
 }
 
 async function post(path: string, body?: unknown): Promise<void> {
@@ -30,6 +50,8 @@ export function useFleet(): FleetApi {
   const [snapshot, setSnapshot] = useState<FleetSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Something worth saying that is not a failure — a removal's loose ends. */
+  const [notice, setNotice] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -87,5 +109,31 @@ export function useFleet(): FleetApi {
         if (!response.ok) throw new Error('could not delete salvo');
       }),
     takeSalvo: (id) => guard(() => post(`/api/salvos/${id}/take`)),
+    addDevice: (device) => guard(() => post('/api/devices', device)),
+    updateDevice: (id, patch) => guard(() => request(`/api/devices/${id}`, 'PATCH', patch)),
+    removeDevice: async (id) => {
+      let orphaned: string[] = [];
+      await guard(async () => {
+        const result = await request<{ orphaned?: string[] }>(`/api/devices/${id}`, 'DELETE');
+        orphaned = result.orphaned ?? [];
+      });
+      if (orphaned.length > 0) {
+        setNotice(`Removed. Still referring to it: ${orphaned.join(', ')} — they will work again if it comes back.`);
+      }
+      return orphaned;
+    },
+    reconnectDevice: (id) => guard(() => post(`/api/devices/${id}/reconnect`)),
+    discover: async () => {
+      try {
+        const result = await request<DiscoverResult>('/api/discover', 'POST', {});
+        setError(null);
+        return result;
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+        return { ok: false, subnets: [], devices: [] };
+      }
+    },
+    notice,
+    clearNotice: () => setNotice(null),
   };
 }

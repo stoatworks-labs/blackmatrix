@@ -63,55 +63,166 @@ export class Fleet extends EventEmitter {
   }
 
   async start(): Promise<void> {
-    for (const [index, deviceConfig] of this.config.devices.entries()) {
-      const runner: RoutableDevice = buildRunner(deviceConfig, index, this.mock);
+    for (const deviceConfig of this.config.devices) {
+      await this.addEntry(deviceConfig);
+    }
+  }
 
-      const entry: DeviceEntry = {
-        config: deviceConfig,
-        runner,
-        matrix: null,
-        locks: new Map(),
-        videohub: null,
-        backend: null as unknown as AtemRouterBackend,
-        shape: '',
-        listeners: new Set(),
-      };
-      entry.backend = new AtemRouterBackend(this, entry);
-      this.entries.set(deviceConfig.id, entry);
+  /**
+   * Bring one device up: connect it, and stand up its Videohub emulation.
+   *
+   * Used both at startup and when a device is added from the UI, which is why
+   * nothing here depends on a device's position in the list — a port derived
+   * from an index would move under every other device the moment one was
+   * removed, and a panel's buttons would quietly start meaning something else.
+   */
+  private async addEntry(deviceConfig: DeviceConfig): Promise<void> {
+    const runner: RoutableDevice = buildRunner(deviceConfig, this.entries.size, this.mock);
 
-      runner.on('state', () => this.refresh(entry));
-      runner.on('connection', () => {
-        this.refresh(entry);
-        this.emit('change');
+    const entry: DeviceEntry = {
+      config: deviceConfig,
+      runner,
+      matrix: null,
+      locks: new Map(),
+      videohub: null,
+      backend: null as unknown as AtemRouterBackend,
+      shape: '',
+      listeners: new Set(),
+    };
+    entry.backend = new AtemRouterBackend(this, entry);
+    this.entries.set(deviceConfig.id, entry);
+
+    runner.on('state', () => this.refresh(entry));
+    runner.on('connection', () => {
+      this.refresh(entry);
+      this.emit('change');
+    });
+
+    try {
+      await runner.connect();
+    } catch (error) {
+      log.error(`${deviceConfig.id}: connect failed — ${String(error)}`);
+    }
+
+    // A real Videohub already speaks this protocol; putting an emulation in
+    // front of one is only useful if asked for by name.
+    const emulate =
+      this.config.videohub.enabled &&
+      (deviceConfig.type !== 'videohub' || deviceConfig.videohubPort !== undefined);
+    if (emulate) {
+      const port = deviceConfig.videohubPort ?? this.nextFreeVideohubPort();
+      const server = new VideohubServer({
+        backend: entry.backend,
+        port,
+        host: this.config.videohub.host,
+        log: (message) => log.info(`${deviceConfig.id}: ${message}`),
       });
-
       try {
-        await runner.connect();
+        await server.start();
+        entry.videohub = server;
+        // Written back so it survives a restart and a reordering. A panel is
+        // configured against a port number; that number is now a fact about
+        // this device, not about where it happens to sit in a list.
+        deviceConfig.videohubPort = server.port;
       } catch (error) {
-        log.error(`${deviceConfig.id}: connect failed — ${String(error)}`);
-      }
-
-      // A real Videohub already speaks this protocol; putting an emulation in
-      // front of one is only useful if asked for by name.
-      const emulate =
-        this.config.videohub.enabled &&
-        (deviceConfig.type !== 'videohub' || deviceConfig.videohubPort !== undefined);
-      if (emulate) {
-        const port = deviceConfig.videohubPort ?? this.config.videohub.basePort + index;
-        const server = new VideohubServer({
-          backend: entry.backend,
-          port,
-          host: this.config.videohub.host,
-          log: (message) => log.info(`${deviceConfig.id}: ${message}`),
-        });
-        try {
-          await server.start();
-          entry.videohub = server;
-        } catch (error) {
-          log.error(`${deviceConfig.id}: videohub port ${port} unavailable — ${String(error)}`);
-        }
+        log.error(`${deviceConfig.id}: videohub port ${port} unavailable — ${String(error)}`);
       }
     }
+  }
+
+  private nextFreeVideohubPort(): number {
+    const taken = new Set<number>();
+    for (const device of this.config.devices) if (device.videohubPort) taken.add(device.videohubPort);
+    for (const entry of this.entries.values()) if (entry.videohub) taken.add(entry.videohub.port);
+    let port = this.config.videohub.basePort;
+    while (taken.has(port)) port++;
+    return port;
+  }
+
+  /** Add a device at runtime. The config file is updated, and it connects now. */
+  async addDevice(deviceConfig: DeviceConfig): Promise<RouteResult> {
+    const problem = validateDevice(deviceConfig, this.config.devices);
+    if (problem) return { ok: false, reason: problem };
+
+    this.config.devices.push(deviceConfig);
+    await this.addEntry(deviceConfig);
+    this.emit('change');
+    this.emit('configChanged');
+    log.info(`added device ${deviceConfig.id} (${deviceConfig.type ?? 'atem'}) at ${deviceConfig.address}`);
+    return { ok: true };
+  }
+
+  /**
+   * Change a device. Everything except its id, which is the key that salvos,
+   * ties and label overrides are all written against — renaming it would leave
+   * those pointing at nothing, so the id is fixed once made.
+   */
+  async updateDevice(id: string, patch: Partial<DeviceConfig>): Promise<RouteResult> {
+    const entry = this.entries.get(id);
+    if (!entry) return { ok: false, reason: `no such device: ${id}` };
+    if (patch.id && patch.id !== id) {
+      return { ok: false, reason: 'a device id cannot change — salvos, ties and labels are keyed on it' };
+    }
+
+    const merged: DeviceConfig = { ...entry.config, ...patch, id };
+    const others = this.config.devices.filter((device) => device.id !== id);
+    const problem = validateDevice(merged, others);
+    if (problem) return { ok: false, reason: problem };
+
+    await this.removeEntry(id);
+    const at = this.config.devices.findIndex((device) => device.id === id);
+    if (at >= 0) this.config.devices[at] = merged;
+    else this.config.devices.push(merged);
+    await this.addEntry(merged);
+
+    this.emit('change');
+    this.emit('configChanged');
+    return { ok: true };
+  }
+
+  /** Take a device down and out of the config. Reports what it leaves dangling. */
+  async removeDevice(id: string): Promise<{ ok: boolean; reason?: string; orphaned?: string[] }> {
+    if (!this.entries.has(id)) return { ok: false, reason: `no such device: ${id}` };
+
+    await this.removeEntry(id);
+    this.config.devices = this.config.devices.filter((device) => device.id !== id);
+    delete this.config.labels[id];
+
+    // Salvos and ties are not silently rewritten: an operator who removes a
+    // switcher for an hour should get their salvos back when it returns.
+    const orphaned: string[] = [];
+    for (const salvo of this.config.salvos) {
+      if (salvo.crosspoints.some((crosspoint) => crosspoint.deviceId === id)) orphaned.push(`salvo "${salvo.name}"`);
+    }
+    for (const tie of this.config.ties) {
+      if (tie.leader.startsWith(`${id}:`) || tie.follower.startsWith(`${id}:`)) orphaned.push(`tie "${tie.name}"`);
+    }
+
+    this.emit('change');
+    this.emit('configChanged');
+    log.info(`removed device ${id}`);
+    return { ok: true, orphaned };
+  }
+
+  /** Drop and rebuild a device's connection, without touching the config. */
+  async reconnectDevice(id: string): Promise<RouteResult> {
+    const entry = this.entries.get(id);
+    if (!entry) return { ok: false, reason: `no such device: ${id}` };
+    const deviceConfig = entry.config;
+    await this.removeEntry(id);
+    await this.addEntry(deviceConfig);
+    this.emit('change');
+    return { ok: true };
+  }
+
+  private async removeEntry(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (!entry) return;
+    await entry.videohub?.stop();
+    await entry.runner.disconnect();
+    entry.runner.removeAllListeners();
+    entry.listeners.clear();
+    this.entries.delete(id);
   }
 
   async stop(): Promise<void> {
@@ -398,6 +509,25 @@ function buildRunner(config: DeviceConfig, index: number, mock: boolean): Routab
   if (mock) return new AtemRoutable(new MockDevice(config, index));
   if (config.capture) return new AtemRoutable(ReplayDevice.fromFile(config, config.capture));
   return new AtemRoutable(new RealDevice(config));
+}
+
+/** Everything that would make a device unusable, checked before it is accepted. */
+function validateDevice(device: DeviceConfig, others: DeviceConfig[]): string | null {
+  if (!device.id || !/^[a-zA-Z0-9_-]+$/.test(device.id)) {
+    return 'id must be letters, numbers, dash or underscore';
+  }
+  if (others.some((other) => other.id === device.id)) return `a device with id "${device.id}" already exists`;
+  if (!device.name?.trim()) return 'name is required';
+  if (!device.capture && !device.address?.trim()) return 'address is required';
+  if (device.videohubPort !== undefined) {
+    if (!Number.isInteger(device.videohubPort) || device.videohubPort < 1 || device.videohubPort > 65535) {
+      return 'videohub port must be a port number';
+    }
+    if (others.some((other) => other.videohubPort === device.videohubPort)) {
+      return `videohub port ${device.videohubPort} is already used by another device`;
+    }
+  }
+  return null;
 }
 
 function splitRef(value: string): { deviceId: string; id: string } | null {

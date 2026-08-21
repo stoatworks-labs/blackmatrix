@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { DevicesPage } from './components/DevicesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { useFleet } from './useFleet';
@@ -7,6 +8,7 @@ import type { Destination } from './types';
 export function App() {
   const api = useFleet();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<'matrix' | 'devices'>('matrix');
   const [building, setBuilding] = useState(false);
   const [builder, setBuilder] = useState<BuilderEntry[]>([]);
 
@@ -56,14 +58,36 @@ export function App() {
               </span>
             </button>
           ))}
-          {devices.length === 0 ? <span className="none">No switchers configured</span> : null}
+          {devices.length === 0 ? <span className="none">No devices yet</span> : null}
         </nav>
+        <button
+          type="button"
+          className={`view-toggle${view === 'devices' ? ' on' : ''}`}
+          onClick={() => setView((current) => (current === 'devices' ? 'matrix' : 'devices'))}
+          title="Add, edit and remove devices"
+        >
+          {view === 'devices' ? 'Back to routing' : 'Devices'}
+        </button>
       </header>
 
       {api.error ? <div className="error">{api.error}</div> : null}
+      {api.notice ? (
+        <div className="notice" onClick={api.clearNotice} role="status">
+          {api.notice}
+        </div>
+      ) : null}
 
       <main>
-        {device ? (
+        {view === 'devices' ? (
+          <DevicesPage
+            devices={devices}
+            onAdd={api.addDevice}
+            onUpdate={api.updateDevice}
+            onRemove={api.removeDevice}
+            onReconnect={api.reconnectDevice}
+            onDiscover={api.discover}
+          />
+        ) : device ? (
           <Matrix
             device={device}
             salvoMembers={salvoMembers}
@@ -76,13 +100,14 @@ export function App() {
           <div className="empty">
             <h2>Nothing to route yet</h2>
             <p>
-              Add switchers to <code>atem-crosspoint.config.json</code>, or start the server with{' '}
-              <code>--mock</code> for a simulated fleet.
+              Open <button type="button" className="linkish" onClick={() => setView('devices')}>Devices</button> to
+              scan the network or add one by address, or start the server with <code>--mock</code> for a simulated
+              fleet.
             </p>
           </div>
         )}
 
-        <SalvoPanel
+        {view === 'devices' ? null : <SalvoPanel
           salvos={api.snapshot?.salvos ?? []}
           devices={devices}
           building={building}
@@ -103,7 +128,7 @@ export function App() {
           }}
           onTake={(id) => void api.takeSalvo(id)}
           onDelete={(id) => void api.deleteSalvo(id)}
-        />
+        />}
       </main>
     </div>
   );

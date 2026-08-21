@@ -9,3 +9,4 @@ atem-crosspoint.config.json
 # filename (often a client or job name), every input name. The stream key is
 # redacted on the way out, but the rest is still someone's show.
 captures/
+*.tsbuildinfo

@@ -89,6 +89,14 @@ capture replays as a device (`"capture": "<file>"`) forever after. `--probe` is 
 writes-to-the-switcher mode that tests the masks against reality; it never touches program,
 preview, keyers or SuperSource.
 
+## 5b. An ATEM is also a Videohub
+
+Blackmagic's firmware serves the Videohub protocol on TCP 9990 — verified on a Mini Extreme
+ISO: protocol 2.7, 23 inputs by 5 outputs (Output 1/2, Webcam Out, Program, Preview), and it
+agrees with this app exactly on all five. This app's value is the other 34 destinations, not
+the protocol itself. Discovery therefore finds a switcher on *both* probes and merges them
+into one entry that steers toward adding it as a switcher.
+
 ## 6. Traps
 
 - **Destination order is the Videohub output numbering, and source order is the
@@ -115,6 +123,13 @@ preview, keyers or SuperSource.
 - **Ties are one level deep, on purpose.** A follower's move never fires another tie.
 - **A Videohub device gets no emulation by default.** It already speaks the protocol;
   putting an emulation in front of one only happens if a `videohubPort` says so.
+- **Discovery must exclude this machine's own addresses.** Companion's Videohub panel
+  surface listens on 9990 on every interface, so without the filter a scan offers to add the
+  host it is running on, once per local address.
+- **Videohub emulation ports are assigned and written back to the config**, never derived
+  from a device's index — an index-derived port silently moves when another device is
+  removed, and every panel button then means something else.
+- **A device id is immutable.** Salvos, ties and labels are keyed on it.
 
 ## 7. Status — be precise about it
 

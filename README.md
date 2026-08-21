@@ -74,6 +74,23 @@ device replays it with no hardware present. See
 **[docs/capture.md](docs/capture.md)**, including the opt-in probe that tests
 the masks against the hardware.
 
+## Adding devices
+
+The **Devices** page (top right) is where switchers and routers are added, edited,
+reconnected and removed, with no config file and no restart. **Scan network**
+sweeps the local /24s for both kinds — a switcher answers on UDP 9910, a router
+on TCP 9990, and neither answers the other's probe — and offers what it finds.
+
+Ports for the Videohub emulation are assigned from `basePort` upward and written
+back to the config, so they stay put when devices are added or removed. A panel
+is configured against a port number; that number is a fact about the device, not
+about where it sits in a list.
+
+A device id cannot be changed once made — salvos, ties and label overrides are
+all keyed on it. Removing a device leaves salvos and ties that reference it
+alone rather than rewriting them, and says which ones: an operator who pulls a
+switcher out for an hour should get their salvos back when it returns.
+
 ## Configuration
 
 ```jsonc

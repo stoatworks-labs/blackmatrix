@@ -2,8 +2,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Request } from 'express';
 import { normalizeAddress, type LockAction } from '@av/videohub';
-import type { Salvo } from './config.js';
+import type { DeviceConfig, Salvo } from './config.js';
 import type { Fleet } from './fleet.js';
+import { scan } from './discovery.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 /** The built UI, when there is one. In dev, Vite serves it instead. */
@@ -23,6 +24,55 @@ export function createApp(fleet: Fleet): express.Express {
 
   app.get('/api/fleet', (_req, res) => {
     res.json(fleet.snapshot());
+  });
+
+  // --- managing the devices themselves ------------------------------------
+
+  app.post('/api/devices', async (req, res) => {
+    const device = req.body as DeviceConfig;
+    const result = await fleet.addDevice({
+      id: device?.id,
+      name: device?.name,
+      address: device?.address ?? '',
+      type: device?.type,
+      videohubPort: device?.videohubPort,
+      capture: device?.capture,
+    });
+    res.status(result.ok ? 200 : 400).json(result);
+  });
+
+  app.patch('/api/devices/:id', async (req, res) => {
+    const result = await fleet.updateDevice(req.params.id, req.body as Partial<DeviceConfig>);
+    res.status(result.ok ? 200 : 400).json(result);
+  });
+
+  app.delete('/api/devices/:id', async (req, res) => {
+    const result = await fleet.removeDevice(req.params.id);
+    res.status(result.ok ? 200 : 404).json(result);
+  });
+
+  app.post('/api/devices/:id/reconnect', async (req, res) => {
+    const result = await fleet.reconnectDevice(req.params.id);
+    res.status(result.ok ? 200 : 404).json(result);
+  });
+
+  /**
+   * Sweep the local networks. Slow by nature — a few seconds per /24 — so it is
+   * a POST that answers when it is done rather than something the UI polls.
+   */
+  app.post('/api/discover', async (req, res) => {
+    const { subnets } = (req.body ?? {}) as { subnets?: string[] };
+    try {
+      const result = await scan({ subnets });
+      const known = new Set(fleet.snapshot().devices.map((device) => device.address.split(':')[0]));
+      res.json({
+        ok: true,
+        subnets: result.subnets,
+        devices: result.devices.map((device) => ({ ...device, alreadyAdded: known.has(device.address) })),
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, reason: String(error) });
+    }
   });
 
   app.post('/api/devices/:id/route', async (req, res) => {

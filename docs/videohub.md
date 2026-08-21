@@ -68,6 +68,28 @@ out-of-range request gets `NAK` instead.
 - The RS-422 ("Leitch") protocol
 - Salvos — they are not part of the Ethernet protocol; this app has its own
 
+## An ATEM already serves this protocol — so why this app?
+
+Blackmagic's firmware runs its own Videohub server on the switcher, on TCP 9990.
+Verified on an ATEM Mini Extreme ISO (2026-08-21): protocol **2.7**, presenting
+the switcher as **23 inputs by 5 outputs** — Output 1, Output 2, Webcam Out,
+Program and Preview. It sends blocks this implementation does not
+(`VIDEO INPUT STATUS`, `CONFIGURATION`, `END PRELUDE`), which is fine in both
+directions: the spec tells clients to ignore what they do not recognise.
+
+Read back to back against this app on the same switcher, the two agreed on all
+five destinations, every time.
+
+The difference is what is on offer. Blackmagic exposes the five outputs it
+considers routing; this app exposes **29 sources by 39 destinations** on the same
+switcher — every aux, both ME buses, four upstream keyers and two downstream
+keyers as fill and key, four SuperSource boxes plus art fill and key, and all
+sixteen multiviewer windows. A router panel pointed at the switcher gets the
+five. Pointed at this app, it gets all of them.
+
+So: use the switcher's own server if five outputs is what you need. This one is
+for when it is not.
+
 ## Driving a real Videohub
 
 A Videohub in the config is a device in the fleet like any switcher:
