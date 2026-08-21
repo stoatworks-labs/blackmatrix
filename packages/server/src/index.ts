@@ -28,7 +28,7 @@ if (!mock) {
   });
 }
 
-const app = createApp(fleet);
+const app = createApp(fleet, config.port);
 const server = http.createServer(app);
 attachWebsocket(server, fleet);
 

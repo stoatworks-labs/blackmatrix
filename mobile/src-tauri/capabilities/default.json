@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "default",
+  "description": "What the shell is allowed to do: sweep for servers, and open one.",
+  "windows": ["main"],
+  "permissions": ["core:default", "opener:default"]
+}

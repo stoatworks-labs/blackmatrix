@@ -18,3 +18,11 @@ launcher/src-tauri/node
 launcher/src-tauri/node.exe
 launcher/src-tauri/blackmatrix-app/
 launcher/src-tauri/target/
+
+# Mobile: Rust build output and the Xcode build dir. The generated Xcode project
+# itself is kept, so a build does not depend on re-running `tauri ios init`.
+mobile/src-tauri/target/
+mobile/src-tauri/gen/apple/build/
+mobile/src-tauri/gen/apple/Externals/
+mobile/src-tauri/gen/apple/*.xcworkspace/xcuserdata/
+mobile/src-tauri/gen/apple/Pods/

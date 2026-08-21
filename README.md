@@ -112,6 +112,34 @@ all keyed on it. Removing a device leaves salvos and ties that reference it
 alone rather than rewriting them, and says which ones: an operator who pulls a
 switcher out for an hour should get their salvos back when it returns.
 
+## On a phone
+
+The web UI is responsive: below 800px the grid is replaced by an X-Y panel —
+a destination list showing what each is taking, then the sources that
+destination will accept. Not a smaller grid, because a grid does not shrink;
+this is what a hardware panel does for the same reason. **Preset is the default
+at that width**, so a mis-tap stages instead of cutting.
+
+That works in any phone browser pointed at the server. There is also a native
+iOS app in `mobile/`, which adds the one thing a browser cannot do — **finding
+the server without typing an address**:
+
+```bash
+cd mobile
+npm install
+npm run ios:init      # once, generates the Xcode project
+npm run ios:build     # or: npx tauri ios build --debug --target aarch64-sim
+```
+
+It is a shell, deliberately: it sweeps the local /24s for BlackMatrix servers,
+remembers the ones you use, and then shows the server's own UI. It does not
+speak the ATEM or Videohub protocols — a phone has no business holding a
+switcher connection open while the OS suspends it, and the panel emulation needs
+a listening socket. Both stay on the server.
+
+Android is scaffolded (`npm run android:init`) but has never been built: there
+is no Android SDK on the machine this was written on.
+
 ## The hosted simulator
 
 ```bash

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- maximum-scale pins the webview: a stray pinch on a control surface
+         leaves it magnified with controls off screen, and WKWebView honours this
+         where mobile Safari does not. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+    />
+    <title>BlackMatrix</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- The picker. Replaced by the server's own UI once one is chosen. -->
+    <main id="picker">
+      <header>
+        <h1>BlackMatrix</h1>
+        <p>Find the server running on your show network.</p>
+      </header>
+
+      <button id="scan" class="primary">Find servers</button>
+      <p id="status" class="status"></p>
+
+      <ul id="found" class="list"></ul>
+
+      <form id="manual" class="manual">
+        <label>
+          <span>Or type an address</span>
+          <input id="host" inputmode="decimal" autocapitalize="off" autocorrect="off" placeholder="192.168.1.90" />
+        </label>
+        <label class="port">
+          <span>Port</span>
+          <input id="port" inputmode="numeric" value="8533" />
+        </label>
+        <button type="submit">Connect</button>
+      </form>
+
+      <section id="recent-wrap" class="recent" hidden>
+        <h2>Recent</h2>
+        <ul id="recent" class="list"></ul>
+      </section>
+
+      <p class="note">
+        This app is a window onto a BlackMatrix server — it does not talk to switchers itself. A phone cannot hold
+        the protocols open, and the panel emulation needs a listening socket, so both stay on the server.
+      </p>
+    </main>
+
+    <!-- The connected view: the server's own responsive UI, with a way back. -->
+    <div id="host-view" hidden>
+      <div class="hostbar">
+        <button id="back">‹ Servers</button>
+        <span id="hostlabel"></span>
+        <button id="reload" aria-label="Reload">⟳</button>
+      </div>
+      <iframe id="frame" title="BlackMatrix"></iframe>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

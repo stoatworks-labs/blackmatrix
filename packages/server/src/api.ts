@@ -1,3 +1,4 @@
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Request } from 'express';
@@ -14,12 +15,27 @@ function clientOf(req: Request): string {
   return normalizeAddress(req.ip ?? req.socket.remoteAddress ?? undefined);
 }
 
-export function createApp(fleet: Fleet): express.Express {
+export function createApp(fleet: Fleet, port: number): express.Express {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
 
+  /**
+   * Health, and enough identity to tell one server from another.
+   *
+   * The mobile app sweeps the network and finds a server once per address it
+   * answers on — a machine with several interfaces is one server, listed many
+   * times. `id` is what collapses those back into one, and `name` is what a
+   * human recognises instead of an IP.
+   */
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, devices: fleet.snapshot().devices.length });
+    const snapshot = fleet.snapshot();
+    res.json({
+      ok: true,
+      id: `${os.hostname()}:${port}`,
+      name: os.hostname().replace(/\.local$/, ''),
+      devices: snapshot.devices.length,
+      connected: snapshot.devices.filter((device) => device.connection === 'connected').length,
+    });
   });
 
   app.get('/api/fleet', (_req, res) => {

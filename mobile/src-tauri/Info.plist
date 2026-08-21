@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Two declarations, both mandatory, both silent when missing.
+
+    NSLocalNetworkUsageDescription: without it iOS denies LAN traffic outright,
+    which is the exact bug that shipped in the desktop app's first release. The
+    sweep would find nothing and look like an empty network.
+
+    NSAllowsLocalNetworking: App Transport Security blocks plain http by
+    default. A BlackMatrix server on a show network is http on a private
+    address, and this is the narrow exception Apple provides for precisely that
+    — it permits local hostnames and private ranges without weakening ATS for
+    the public internet.
+  -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>BlackMatrix looks for a router server on your local network.</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_http._tcp</string>
+  </array>
+</dict>
+</plist>
