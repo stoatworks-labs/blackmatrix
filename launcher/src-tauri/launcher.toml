@@ -1,0 +1,35 @@
+# BlackMatrix desktop app config.
+#
+# BlackMatrix is a Node app, so this bundle embeds BOTH a self-contained Node
+# runtime (`node`) and the whole app (server ESM bundle + built web UI,
+# mirroring the repo's packages/{server,web}/dist layout so the server's
+# import.meta.url-relative paths resolve). {resource} = the .app resource dir.
+# Fully standalone: nothing needs to be installed on the machine.
+
+[app]
+name = "BlackMatrix"
+command = "{resource}/node"
+args = ["{resource}/blackmatrix-app/packages/server/dist/index.js"]
+url = "http://{host}:{port}/"
+default_port = 8533
+# cwd omitted -> runs from the writable app-config dir.
+
+[inject]
+mode = "env"
+
+[inject.env]
+BLACKMATRIX_PORT = "{port}"
+BLACKMATRIX_HOST = "{host}"
+
+# Palette mirrored from BlackMatrix's own grid: near-black, amber tally.
+[app.theme]
+bg = "#0a0c0f"
+panel = "#12161b"
+"panel-2" = "#171c23"
+border = "#242b34"
+text = "#dfe5ec"
+muted = "#8b97a6"
+dim = "#5b616b"
+accent = "#ffb020"
+"accent-soft" = "#2a2413"
+good = "#3fb950"

@@ -11,3 +11,10 @@ atem-crosspoint.config.json
 captures/
 *.tsbuildinfo
 dist-sim/
+
+# Launcher payload: the embedded Node runtime and staged app tree are big and
+# regenerable. They ship inside the release bundle, not in the repo.
+launcher/src-tauri/node
+launcher/src-tauri/node.exe
+launcher/src-tauri/blackmatrix-app/
+launcher/src-tauri/target/

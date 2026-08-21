@@ -51,6 +51,8 @@ export interface Tie {
 export interface AppConfig {
   /** HTTP port for the UI and REST API. */
   port: number;
+  /** Interface to bind. Undefined binds every interface. */
+  host?: string;
   videohub: {
     enabled: boolean;
     /** First device gets this port, the next one basePort + 1, and so on. */
@@ -142,15 +144,28 @@ export function configPath(): string {
   return current;
 }
 
+/**
+ * The desktop launcher picks an interface and a port in its panel and passes
+ * them in the environment, so those win over the file. Nothing else sets them,
+ * and an unset variable leaves the file's values alone.
+ */
+function applyEnvironmentOverrides(config: AppConfig): AppConfig {
+  const port = Number(process.env.BLACKMATRIX_PORT);
+  if (Number.isInteger(port) && port > 0 && port < 65536) config.port = port;
+  const host = process.env.BLACKMATRIX_HOST?.trim();
+  if (host) config.host = host;
+  return config;
+}
+
 export function loadConfig(): AppConfig {
   const file = configPath();
   if (!fs.existsSync(file)) {
     log.warn(`no config at ${file} — starting with an empty fleet. Add devices in the UI or the file.`);
-    return structuredClone(DEFAULTS);
+    return applyEnvironmentOverrides(structuredClone(DEFAULTS));
   }
   try {
     const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<AppConfig>;
-    return {
+    return applyEnvironmentOverrides({
       ...DEFAULTS,
       ...parsed,
       videohub: { ...DEFAULTS.videohub, ...(parsed.videohub ?? {}) },
@@ -158,14 +173,17 @@ export function loadConfig(): AppConfig {
       labels: parsed.labels ?? {},
       salvos: parsed.salvos ?? [],
       ties: parsed.ties ?? [],
-    };
+    });
   } catch (error) {
     log.error(`config at ${file} is not readable JSON: ${String(error)}`);
-    return structuredClone(DEFAULTS);
+    return applyEnvironmentOverrides(structuredClone(DEFAULTS));
   }
 }
 
 export function saveConfig(config: AppConfig): void {
   const file = configPath();
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+  // The host and port may have come from the launcher's panel this run; writing
+  // them back would make a one-off choice permanent and outlive the launcher.
+  const { host: _host, ...persisted } = config;
+  fs.writeFileSync(file, `${JSON.stringify(persisted, null, 2)}\n`, 'utf8');
 }

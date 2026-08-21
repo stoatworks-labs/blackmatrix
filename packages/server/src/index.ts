@@ -52,8 +52,10 @@ async function main(): Promise<void> {
   }
 
   await fleet.start();
-  server.listen(config.port, () => {
-    log.info(`blackmatrix ${mock ? '(mock fleet) ' : ''}on http://localhost:${config.port}`);
+  server.listen(config.port, config.host, () => {
+    log.info(
+      `blackmatrix ${mock ? '(mock fleet) ' : ''}on http://${config.host ?? 'localhost'}:${config.port}`,
+    );
     for (const device of fleet.snapshot().devices) {
       const where = device.videohubPort ? `videohub on :${device.videohubPort}` : 'videohub off';
       log.info(`  ${device.id} — ${device.name} (${device.connection}), ${where}`);
