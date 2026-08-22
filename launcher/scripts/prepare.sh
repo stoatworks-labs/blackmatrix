@@ -72,13 +72,47 @@ echo "==> vendoring workspace packages (@av/*) into node_modules"
 # These are workspace-local and not on npm, so the production install above
 # cannot resolve them. Their built output goes in by hand, under the name the
 # server imports.
-for pkg in videohub:videohub matrix:atem-matrix; do
-  dir="${pkg%%:*}"
-  name="${pkg##*:}"
-  mkdir -p "$APP/node_modules/@av/$name"
-  cp -R "$REPO/packages/$dir/dist" "$APP/node_modules/@av/$name/dist"
-  cp "$REPO/packages/$dir/package.json" "$APP/node_modules/@av/$name/package.json"
+#
+# The list is derived from the server's own dependencies rather than written out
+# here: a hardcoded pair of packages silently shipped every v0.2.0 desktop
+# bundle without @av/ascii-matrix, and a missing package only shows up at
+# runtime, inside the installed app, as ERR_MODULE_NOT_FOUND.
+mapping="$(node -e '
+  const fs = require("fs"), path = require("path");
+  const pkgs = path.join(process.argv[1], "packages");
+  const dirOf = {};
+  for (const dir of fs.readdirSync(pkgs)) {
+    const manifest = path.join(pkgs, dir, "package.json");
+    if (fs.existsSync(manifest)) {
+      dirOf[JSON.parse(fs.readFileSync(manifest, "utf8")).name] = dir;
+    }
+  }
+  const server = JSON.parse(fs.readFileSync(path.join(pkgs, "server", "package.json"), "utf8"));
+  for (const name of Object.keys(server.dependencies || {})) {
+    if (!name.startsWith("@av/")) continue;
+    if (!dirOf[name]) throw new Error(`${name} is a server dependency but no packages/* provides it`);
+    console.log(`${name}\t${dirOf[name]}`);
+  }
+' "$REPO")"
+
+while IFS=$'\t' read -r name dir; do
+  [ -n "$name" ] || continue
+  echo "    $name <- packages/$dir"
+  mkdir -p "$APP/node_modules/$name"
+  cp -R "$REPO/packages/$dir/dist" "$APP/node_modules/$name/dist"
+  cp "$REPO/packages/$dir/package.json" "$APP/node_modules/$name/package.json"
+done <<< "$mapping"
+
+# Belt and braces: whatever the built server actually imports must be on disk,
+# or the bundle is dead on arrival in a way no build step would notice.
+missing=""
+for name in $(grep -rhoE '@av/[a-z0-9-]+' "$APP/packages/server/dist" | sort -u); do
+  [ -d "$APP/node_modules/$name" ] || missing="$missing $name"
 done
+if [ -n "$missing" ]; then
+  echo "ERROR: the server imports packages that were not vendored:$missing" >&2
+  exit 1
+fi
 
 echo "==> fetching self-contained Node $NODE_VERSION ($PLATFORM)"
 if [[ "$PLATFORM" == win-* ]]; then
