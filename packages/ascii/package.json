@@ -1,6 +1,6 @@
 {
   "name": "@av/ascii-matrix",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "Portable plain-text line protocol for router crosspoints, for control systems that cannot speak Videohub",
