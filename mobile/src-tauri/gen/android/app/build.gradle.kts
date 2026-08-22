@@ -13,6 +13,23 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Release signing, read from a file that is NOT in the repo.
+//
+// keystore.properties and the .jks it points at are gitignored: a signing key is
+// the identity of every future update, and Android will refuse an update signed
+// by a different one. Losing it means a new package name.
+//
+// When the file is absent — which it is for anyone who has just cloned this —
+// the release build stays unsigned rather than failing, so `assembleDebug` and
+// CI keep working. See docs/signing.md.
+val keystoreProperties = Properties().apply {
+    val propFile = rootProject.file("keystore.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
+}
+val hasKeystore = keystoreProperties.getProperty("storeFile") != null
+
 android {
     compileSdk = 36
     namespace = "com.allansargeant.blackmatrix.mobile"
@@ -29,6 +46,16 @@ android {
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
+    signingConfigs {
+        if (hasKeystore) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
     buildTypes {
         getByName("debug") {
             manifestPlaceholders["usesCleartextTraffic"] = "true"
@@ -42,6 +69,9 @@ android {
             }
         }
         getByName("release") {
+            if (hasKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }

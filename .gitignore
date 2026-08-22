@@ -26,3 +26,10 @@ mobile/src-tauri/gen/apple/build/
 mobile/src-tauri/gen/apple/Externals/
 mobile/src-tauri/gen/apple/*.xcworkspace/xcuserdata/
 mobile/src-tauri/gen/apple/Pods/
+
+# Signing material. The key is the identity of every future update of the app —
+# Android refuses an update signed by a different one — so it lives outside the
+# repo entirely. See docs/signing.md.
+mobile/src-tauri/gen/android/keystore.properties
+*.jks
+*.keystore

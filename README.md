@@ -137,8 +137,14 @@ speak the ATEM or Videohub protocols — a phone has no business holding a
 switcher connection open while the OS suspends it, and the panel emulation needs
 a listening socket. Both stay on the server.
 
-Android is scaffolded (`npm run android:init`) but has never been built: there
-is no Android SDK on the machine this was written on.
+Android builds too (`npm run android:init`, then `npm run android:build`). It
+needs `ANDROID_HOME`, `NDK_HOME` and a `JAVA_HOME` pointing at **JDK 21** —
+Gradle cannot use JDK 25, and says so only as a bare `> 25.0.4`.
+
+Neither mobile app has run on a physical device: that needs an iOS development
+profile and an Android release key, both of which are credentials rather than
+code. **[docs/signing.md](docs/signing.md)** has the steps, and the build wiring
+for both is already in place.
 
 ## The hosted simulator
 
