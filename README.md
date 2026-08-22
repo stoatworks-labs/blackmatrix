@@ -50,26 +50,48 @@ Against real switchers, write `blackmatrix.config.json` (see
 npm run build && npm start
 ```
 
+<!-- downloads:start -->
+
 ## Download
 
-**[v0.1.2](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.1.2)** — desktop app, container, or run the server yourself.
+**[v0.1.2](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.1.2)** — prebuilt for macOS, Windows and Linux. Pick your platform:
 
-| Platform | File |
-|---|---|
-| macOS (Apple Silicon) | `BlackMatrix_0.1.2_aarch64.dmg` · `blackmatrix-0.1.2-macos-aarch64.pkg` |
-| macOS (Intel) | `BlackMatrix_0.1.2_x64.dmg` · `blackmatrix-0.1.2-macos-x86_64.pkg` |
-| Windows | `BlackMatrix_0.1.2_x64-setup.exe` |
-| Linux | `BlackMatrix_0.1.2_amd64.deb` · `BlackMatrix-0.1.2-1.x86_64.rpm` |
-| Container | `ghcr.io/stoatworks-labs/blackmatrix` |
+<details>
+<summary><b>macOS</b> — Apple Silicon, Intel</summary>
 
-The desktop app bundles its own Node runtime — nothing else needs installing.
-**macOS builds are unsigned**, so Gatekeeper will object on first open, and
-macOS will ask for local network access on first run: say yes, or no switcher
-will be found.
+| Build | Download | Size |
+| --- | --- | --- |
+| Apple Silicon · .dmg disk image | [`BlackMatrix_0.1.2_aarch64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/BlackMatrix_0.1.2_aarch64.dmg) | 46 MB |
+| Intel · .dmg disk image | [`BlackMatrix_0.1.2_x64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/BlackMatrix_0.1.2_x64.dmg) | 48 MB |
+| Apple Silicon · .pkg installer | [`blackmatrix-0.1.2-macos-aarch64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/blackmatrix-0.1.2-macos-aarch64.pkg) | 46 MB |
+| Intel · .pkg installer | [`blackmatrix-0.1.2-macos-x86_64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/blackmatrix-0.1.2-macos-x86_64.pkg) | 49 MB |
 
-This repo is private, so these links are not managed by the fleet's
-`gen-downloads.py` — that only handles public repos, and its markers are
-deliberately absent here.
+</details>
+
+<details>
+<summary><b>Windows</b> — x64</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| x64 · .exe installer | [`BlackMatrix_0.1.2_x64-setup.exe`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/BlackMatrix_0.1.2_x64-setup.exe) | 29 MB |
+
+</details>
+
+<details>
+<summary><b>Linux</b> — x64</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| x64 · .deb package (Debian/Ubuntu) | [`BlackMatrix_0.1.2_amd64.deb`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/BlackMatrix_0.1.2_amd64.deb) | 56 MB |
+| x64 · .rpm package (Fedora/RHEL) | [`BlackMatrix-0.1.2-1.x86_64.rpm`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.1.2/BlackMatrix-0.1.2-1.x86_64.rpm) | 56 MB |
+
+</details>
+
+All builds, checksums and release notes: [github.com/stoatworks-labs/blackmatrix/releases](https://github.com/stoatworks-labs/blackmatrix/releases).
+
+The Windows builds are unsigned, so SmartScreen warns once.
+
+<!-- downloads:end -->
 
 ## Videohubs, not just switchers
 
