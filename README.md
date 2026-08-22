@@ -1,11 +1,14 @@
 # BlackMatrix
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. It was developed and
-> verified end-to-end against a built-in simulated switcher fleet (`--mock`) and
-> against a real TCP client speaking the Videohub protocol. It has **never been
-> run against a real ATEM switcher, or against a real Videohub control panel.**
-> Prove it on your own kit before it goes anywhere near a show.
+> (Anthropic), directed and reviewed by a human author. It was developed against a
+> built-in simulated switcher fleet (`--mock`) and a real TCP client speaking the
+> Videohub protocol, then **checked against a real ATEM Mini Extreme ISO**, which
+> corrected the routing rules rather than confirming them — the availability masks
+> were probed on the hardware and this app's matrix was served from it as a 29x39
+> router. What has **never** happened is a real Videohub control panel driving it,
+> and no real Videohub has ever been one of its devices. Prove it on your own kit
+> before it goes anywhere near a show.
 
 A **crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
 across the top, destinations down the side, one click to route — that also

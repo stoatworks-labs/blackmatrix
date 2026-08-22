@@ -3,6 +3,7 @@ dist/
 out/
 *.log
 .DS_Store
+blackmatrix.config.json
 atem-crosspoint.config.json
 
 # Captures are a switcher's whole state: the streaming block, the recording
