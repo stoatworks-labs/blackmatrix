@@ -46,6 +46,42 @@ export interface Salvo {
   crosspoints: Array<{ deviceId: string; destination: string; source: number }>;
 }
 
+/** How the health of a redundant system is judged. Mirrors the server's. */
+export type HealthProbe =
+  | { kind: 'tcp'; host: string; port: number }
+  | { kind: 'http'; url: string; expectStatus?: number }
+  | { kind: 'heartbeat' };
+
+export interface FailoverWatch {
+  id: string;
+  name: string;
+  probe: HealthProbe;
+  intervalMs: number;
+  failAfter: number;
+  restoreAfter: number;
+  onLostSalvo: string;
+  onRestoredSalvo?: string;
+  armed: boolean;
+  /** A failover route is not refused by a lock. */
+  overrideLocks: boolean;
+  /** Nothing fires until the main system has been seen working once. */
+  requireHealthyFirst: boolean;
+}
+
+export type WatchState = 'unknown' | 'healthy' | 'failing' | 'failed' | 'returned';
+
+/** A watch plus what the server has seen of it. */
+export interface FailoverView extends FailoverWatch {
+  state: WatchState;
+  goodRun: number;
+  badRun: number;
+  everHealthy: boolean;
+  lastProbeAt: string | null;
+  lastChangeAt: string | null;
+  firedAt: string | null;
+  lastReason: string | null;
+}
+
 export interface FoundDevice {
   address: string;
   /** An ATEM answers on both protocols; adding it as a switcher gets every bus. */
@@ -76,4 +112,5 @@ export interface DeviceInput {
 export interface FleetSnapshot {
   devices: DeviceView[];
   salvos: Salvo[];
+  failover: FailoverView[];
 }

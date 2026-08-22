@@ -1,6 +1,12 @@
 import { EventEmitter } from 'node:events';
 import { isLegal, type Destination, type MatrixModel, type Source } from '@av/atem-matrix';
-import { VideohubServer, type LockAction, type RouterBackend, type RouterUpdate } from '@av/videohub';
+import {
+  VideohubServer,
+  normalizeAddress,
+  type LockAction,
+  type RouterBackend,
+  type RouterUpdate,
+} from '@av/videohub';
 import type { AppConfig, DeviceConfig, Salvo, Tie } from './config.js';
 import { log } from './log.js';
 import { AtemRoutable, type RoutableDevice } from './atem/device.js';
@@ -27,11 +33,24 @@ export interface DeviceView {
 export interface FleetSnapshot {
   devices: DeviceView[];
   salvos: Salvo[];
+  /** Empty until a failover controller is attached. */
+  failover: unknown[];
 }
 
 export interface RouteResult {
   ok: boolean;
   reason?: string;
+}
+
+/**
+ * Who is asking, beyond an address.
+ *
+ * `overrideLocks` is the only thing a caller can claim, and only the failover
+ * paths claim it: a lock is there to stop a person changing a destination, and
+ * a redundancy system taking over is not a person changing their mind.
+ */
+export interface RouteOptions {
+  overrideLocks?: boolean;
 }
 
 interface DeviceEntry {
@@ -57,6 +76,13 @@ export class Fleet extends EventEmitter {
   private mock: boolean;
   /** Re-entrancy guard for ties: a follower's move never fires another tie. */
   private applyingTie = false;
+  /**
+   * Set by whoever owns the failover controller, so the one snapshot every
+   * client already watches carries the watches too. A callback rather than a
+   * reference: the controller drives the fleet, and a fleet that imported it
+   * back would be a cycle for no gain.
+   */
+  private failoverView: () => unknown[] = () => [];
 
   constructor(config: AppConfig, mock: boolean) {
     super();
@@ -118,6 +144,8 @@ export class Fleet extends EventEmitter {
         port,
         host: this.config.videohub.host,
         log: (message) => log.info(`${deviceConfig.id}: ${message}`),
+        modelName: this.config.videohub.modelName,
+        protocolVersion: this.config.videohub.protocolVersion,
       });
       try {
         await server.start();
@@ -327,7 +355,29 @@ export class Fleet extends EventEmitter {
         locks: this.locksOf(entry),
       })),
       salvos: this.config.salvos,
+      failover: this.failoverView(),
     };
+  }
+
+  /** Let the snapshot carry failover state. See `failoverView`. */
+  setFailoverView(view: () => unknown[]): void {
+    this.failoverView = view;
+  }
+
+  /**
+   * Is this client the redundancy system rather than an operator?
+   *
+   * Configured by address, per protocol. The address is the only identity
+   * either protocol offers — the same reason Videohub locks are per IP — so
+   * this is as strong as the protocol allows and no stronger. It is empty by
+   * default and should stay empty on any network where an unknown machine can
+   * reach the port.
+   */
+  isFailoverClient(client: string, protocol: 'videohub' | 'ascii'): boolean {
+    const configured =
+      protocol === 'videohub' ? this.config.videohub.failoverClients : this.config.ascii?.failoverClients;
+    if (!configured || configured.length === 0) return false;
+    return configured.some((address) => normalizeAddress(address.trim()) === client);
   }
 
   getEntry(deviceId: string): DeviceEntry | undefined {
@@ -353,6 +403,7 @@ export class Fleet extends EventEmitter {
     destinationId: string,
     sourceId: number,
     client: string,
+    options: RouteOptions = {},
   ): Promise<RouteResult> {
     const entry = this.entries.get(deviceId);
     if (!entry) return { ok: false, reason: `no such device: ${deviceId}` };
@@ -363,7 +414,12 @@ export class Fleet extends EventEmitter {
 
     const owner = this.locksOf(entry)[destinationId] ?? null;
     if (owner !== null && owner !== client && owner !== 'this app') {
-      return { ok: false, reason: `${destination.label} is locked by ${owner}` };
+      if (!options.overrideLocks) {
+        return { ok: false, reason: `${destination.label} is locked by ${owner}` };
+      }
+      // Loudly, and every time. Walking through a lock is the right thing here
+      // and still worth an entry in the log somebody reads afterwards.
+      log.warn(`${deviceId}: ${destination.label} was locked by ${owner} — overridden by ${client}`);
     }
 
     const source = entry.matrix.sources.find((s) => s.id === sourceId);
@@ -494,11 +550,18 @@ export class Fleet extends EventEmitter {
   async routeBatch(
     crosspoints: Array<{ deviceId: string; destination: string; source: number }>,
     client: string,
+    options: RouteOptions = {},
   ): Promise<{ ok: boolean; applied: number; failures: string[] }> {
     const failures: string[] = [];
     let applied = 0;
     for (const crosspoint of crosspoints) {
-      const result = await this.route(crosspoint.deviceId, crosspoint.destination, crosspoint.source, client);
+      const result = await this.route(
+        crosspoint.deviceId,
+        crosspoint.destination,
+        crosspoint.source,
+        client,
+        options,
+      );
       if (result.ok) applied++;
       else failures.push(`${crosspoint.deviceId}/${crosspoint.destination}: ${result.reason}`);
     }
@@ -554,13 +617,23 @@ export class Fleet extends EventEmitter {
   }
 
   /** Fire a salvo. Every crosspoint is attempted; the failures come back named. */
-  async takeSalvo(id: string, client: string): Promise<{ ok: boolean; failures: string[] }> {
+  async takeSalvo(
+    id: string,
+    client: string,
+    options: RouteOptions = {},
+  ): Promise<{ ok: boolean; failures: string[] }> {
     const salvo = this.config.salvos.find((s) => s.id === id);
     if (!salvo) return { ok: false, failures: [`no such salvo: ${id}`] };
 
     const failures: string[] = [];
     for (const crosspoint of salvo.crosspoints) {
-      const result = await this.route(crosspoint.deviceId, crosspoint.destination, crosspoint.source, client);
+      const result = await this.route(
+        crosspoint.deviceId,
+        crosspoint.destination,
+        crosspoint.source,
+        client,
+        options,
+      );
       if (!result.ok) failures.push(`${crosspoint.deviceId}/${crosspoint.destination}: ${result.reason}`);
     }
     return { ok: failures.length === 0, failures };
@@ -694,7 +767,12 @@ class AtemRouterBackend implements RouterBackend {
     const destination = this.destinations[output];
     const source = this.sources[input];
     if (!destination || !source) return false;
-    const result = await this.fleet.route(this.entry.config.id, destination.id, source.id, client);
+    const result = await this.fleet.route(this.entry.config.id, destination.id, source.id, client, {
+      overrideLocks: this.fleet.isFailoverClient(client, 'videohub'),
+    });
+    // A refusal is answered on the wire with ACK and an unchanged status, which
+    // is what the spec asks for and what a media server cannot see. The log is
+    // the only place it exists, so it is a warning rather than a debug line.
     if (!result.ok) log.warn(`${this.entry.config.id}: videohub route refused — ${result.reason}`);
     return result.ok;
   }

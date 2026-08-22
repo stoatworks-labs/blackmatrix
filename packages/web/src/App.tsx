@@ -3,6 +3,7 @@ import { DevicesPage } from './components/DevicesPage';
 import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
+import { FailoverPanel } from './components/FailoverPanel';
 import { useFleet } from './useFleet';
 import { useIsMobile } from './useIsMobile';
 import { MobileRouter } from './components/MobileRouter';
@@ -336,6 +337,7 @@ export function App() {
         )}
 
         {view === 'matrix' && !isMobile ? (
+          <aside className="salvos">
           <SalvoPanel
           salvos={api.snapshot?.salvos ?? []}
           devices={devices}
@@ -358,6 +360,16 @@ export function App() {
           onTake={(id) => void api.takeSalvo(id)}
             onDelete={(id) => void api.deleteSalvo(id)}
           />
+          <FailoverPanel
+            watches={api.snapshot?.failover ?? []}
+            salvos={api.snapshot?.salvos ?? []}
+            onSave={(watch) => void api.saveWatch(watch)}
+            onDelete={(id) => void api.deleteWatch(id)}
+            onArm={(id, armed) => void api.armWatch(id, armed)}
+            onTrigger={(id) => void api.triggerWatch(id)}
+            onRestore={(id) => void api.restoreWatch(id)}
+          />
+          </aside>
         ) : null}
       </main>
     </div>

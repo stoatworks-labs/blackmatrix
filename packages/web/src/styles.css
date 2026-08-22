@@ -811,3 +811,58 @@ main > .empty code { color: var(--routed); }
   .device-form { grid-template-columns: 1fr; }
   .port-choice { flex-wrap: wrap; }
 }
+
+/* --- failover ---------------------------------------------------------- */
+/*
+ * Shares the right-hand column with the salvos, because a watch fires a salvo
+ * and the two are read together. The divider is what separates them.
+ */
+.salvo-panel, .failover { display: flex; flex-direction: column; gap: 10px; }
+.failover { padding-top: 12px; border-top: 1px solid var(--line); }
+
+.watch-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.watch-list li {
+  /* Stacked, not side by side: three controls and a state sentence do not fit
+     across a 274px column, and the Restore button was being clipped off. */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+}
+.watch-list li div { display: flex; flex-direction: column; min-width: 0; }
+.watch-list span { color: var(--dim); font-size: 10px; }
+.watch-list .why { color: var(--dim); font-style: italic; }
+
+/* The state is the first thing to read, so it is the edge of the row. */
+.watch.healthy { border-left-color: var(--routed); }
+.watch.failing { border-left-color: #d8a13a; }
+.watch.failed, .watch.returned { border-left-color: #d8503a; }
+
+/* Specific enough to beat `.watch-list li div`, which stacks the text column. */
+.watch-list li .watch-actions { display: flex; flex-direction: row; gap: 4px; align-items: center; }
+.watch-actions button { flex: 1; white-space: nowrap; }
+.watch-actions button:last-child { flex: none; }
+
+.watch-form { display: flex; flex-direction: column; gap: 8px; }
+.watch-form label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--dim); min-width: 0; }
+.watch-form input, .watch-form select {
+  padding: 5px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  /* A grid or flex item's automatic minimum is its content, and an input's is
+     its default size — without this the fields hang off a narrow column. */
+  min-width: 0;
+}
+.watch-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 0; }
+.watch-form .hint { margin: 0; color: var(--dim); font-size: 10px; line-height: 1.45; }
+.watch-form .hint code { color: var(--routed); }

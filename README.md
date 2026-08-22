@@ -13,7 +13,8 @@
 A **crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
 across the top, destinations down the side, one click to route — that also
 **pretends to be a Blackmagic Videohub** so hardware router panels, Companion and
-Blackmagic's own software can drive the same crosspoints.
+Blackmagic's own software can drive the same crosspoints — and, for a redundant
+rig, so a **media server can switch to its backup machine through it**.
 
 An ATEM has no single "router", so this treats every bus that takes one source at
 a time as a destination, grouped into sections:
@@ -250,6 +251,48 @@ come back named rather than silently dropped. Salvos are this app's own idea —
 they are not part of the Videohub Ethernet Protocol — so they exist in the UI and
 the REST API only.
 
+## Redundant systems
+
+A redundant media server rig is two machines playing the same show and a router
+downstream deciding which one reaches the screens. This can be that router, in
+either of the two shapes the industry uses.
+
+**The media server drives it.** disguise's understudy sends matrix routing
+itself the moment it takes over a failed machine, and PIXERA fires a control
+action at a matrix switcher from its `System Lost` trigger. Both can point at
+the Videohub emulation — disguise has a Blackmagic Smart Videohub driver, and
+PIXERA can send anything over TCP. Because an ATEM re-syncs its inputs, the main
+and backup feeds do not have to be genlocked to each other for a clean cut,
+which an SDI router does require.
+
+**Or this app decides.** A **failover watch** polls a machine — a TCP port, a
+URL, or a heartbeat it must be sent — and fires a salvo when it stops answering.
+It will not fire before it has seen the machine working once, it starts
+disarmed, it fires once, and it does not switch back unless you say what "back"
+means. What it fires is an ordinary salvo, so the failover can be rehearsed by
+pressing Take on it.
+
+**And a plain line protocol** on TCP and UDP (`ascii.enabled`, port 9995) for
+anything that can send a string but not speak Videohub — disguise's generic
+Telnet Matrix, PIXERA's TCP module, 7thSense, a show controller:
+
+```
+ROUTE 2 1          route output 2 to input 1
+1*2!               the same thing, Extron style
+SALVO backup       fire a salvo by name
+3.                 fire the third salvo (Extron preset recall)
+FAILOVER main      fire a watch's lost salvo
+```
+
+One lock trap is worth knowing before you rely on any of it: a refused route is
+answered with `ACK` and an unchanged status, as the Videohub spec requires,
+which means **a media server cannot see a refusal**. A locked destination is a
+failover that silently does not happen. `videohub.failoverClients` names the
+addresses whose routes walk through locks.
+
+All of it, including how to fill in disguise's and PIXERA's fields, is in
+**[docs/failover.md](docs/failover.md)**.
+
 ## REST API
 
 | Method | Path | Body |
@@ -261,6 +304,12 @@ the REST API only.
 | `GET` `POST` | `/api/salvos` | a salvo |
 | `DELETE` | `/api/salvos/:id` | — |
 | `POST` | `/api/salvos/:id/take` | — |
+| `GET` `POST` | `/api/failover` | a failover watch |
+| `DELETE` | `/api/failover/:id` | — |
+| `POST` | `/api/failover/:id/arm` | `{ "armed": true }` |
+| `POST` | `/api/failover/:id/trigger` | — take over now |
+| `POST` | `/api/failover/:id/restore` | — go back, clear the latch |
+| `POST` | `/api/failover/:id/heartbeat` | — for a heartbeat probe |
 
 The browser gets the same state pushed over `ws://<host>:8533/ws`.
 
@@ -271,30 +320,35 @@ Renaming a **source** renames the input on the switcher itself. Renaming a
 
 ```
 packages/
-  videohub   @av/videohub    Videohub Ethernet Protocol v2.3, server AND client. Knows nothing about ATEMs.
-  matrix     @av/atem-matrix Turns an AtemState into destinations, legal sources, and routing calls.
-  server     @blackmatrix/server  Fleet, locks, salvos, REST + websocket, one Videohub per switcher.
+  videohub   @av/videohub      Videohub Ethernet Protocol v2.3, server AND client. Knows nothing about ATEMs.
+  ascii      @av/ascii-matrix  The plain-text line protocol. Also knows nothing about ATEMs.
+  matrix     @av/atem-matrix   Turns an AtemState into destinations, legal sources, and routing calls.
+  server     @blackmatrix/server  Fleet, locks, salvos, failover, REST + websocket, one Videohub per switcher.
   web        @blackmatrix/web     The grid.
 ```
 
-The two libraries are portable on purpose: `@av/videohub` will put a Videohub
-front end on anything with crosspoints, and `@av/atem-matrix` has no I/O in it at all.
+The three libraries are portable on purpose: `@av/videohub` will put a Videohub
+front end on anything with crosspoints, `@av/ascii-matrix` will put a line
+protocol on it, and `@av/atem-matrix` has no I/O in it at all.
 
 ## Known limits
 
-- **No ATEM hardware has ever been on the other end of this.** The routing calls
-  and the availability gating come from `atem-connection`'s API and enum
-  definitions.
-- **No real Videohub panel has driven it either** — the protocol side is verified
-  against the published specification and a TCP client, not against a panel.
+- **No real Videohub panel has driven it**, and no real Videohub has ever been
+  one of its devices — the protocol side is verified against the published
+  specification, a TCP client, and an ATEM's own Videohub server, not a panel.
+- **No media server has driven the failover support.** It is written from
+  disguise's and PIXERA's documentation, and tested against this repo's own
+  clients. The numbering is the first thing to check on real kit.
 - The first two **multiview windows** are program and preview on most switchers,
   which usually means the switcher ignores a route sent to them. Those rows are
   marked, not hidden.
 - **Media player still/clip selection is deliberately not a destination.** It
   takes from the media pool, not from the video sources, so it does not belong in
   a matrix whose columns are sources.
-- Aux-only availability bits (`Auxiliary1` / `Auxiliary2`) are read from the enum
-  and unverified on hardware.
+- The failover probes answer "is that machine there", not "is it playing the
+  right thing" — a TCP handshake, an HTTP answer, or a heartbeat. Knowing whether
+  a media server's output is *correct* means speaking its protocol, which is a
+  much larger promise than this makes.
 - Streaming and recording follow program and are not routable, so they are absent.
 
 ## License

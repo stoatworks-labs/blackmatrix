@@ -3,8 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Request } from 'express';
 import { normalizeAddress, type LockAction } from '@av/videohub';
-import type { DeviceConfig, Salvo } from './config.js';
+import { withFailoverDefaults, type DeviceConfig, type FailoverWatch, type Salvo } from './config.js';
 import type { Fleet } from './fleet.js';
+import type { FailoverController } from './failover.js';
 import { scan } from './discovery.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -15,7 +16,7 @@ function clientOf(req: Request): string {
   return normalizeAddress(req.ip ?? req.socket.remoteAddress ?? undefined);
 }
 
-export function createApp(fleet: Fleet, port: number): express.Express {
+export function createApp(fleet: Fleet, port: number, failover?: FailoverController): express.Express {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
 
@@ -179,6 +180,93 @@ export function createApp(fleet: Fleet, port: number): express.Express {
 
   app.post('/api/salvos/:id/take', async (req, res) => {
     const result = await fleet.takeSalvo(req.params.id, clientOf(req));
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
+  // --- failover -----------------------------------------------------------
+  //
+  // Every one of these has to be reachable by something that is not a browser:
+  // a media server's control module, a show controller, a script in a rack. So
+  // they are plain POSTs with no body required, which is the most a device with
+  // a "send an HTTP request" action can usually manage.
+
+  const noFailover = { ok: false, reason: 'failover is not available on this server' };
+
+  app.get('/api/failover', (_req, res) => {
+    res.json(failover?.view() ?? []);
+  });
+
+  app.post('/api/failover', (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    const watch = withFailoverDefaults(req.body as Partial<FailoverWatch>);
+    if (!watch.name.trim()) {
+      res.status(400).json({ ok: false, reason: 'a watch needs a name' });
+      return;
+    }
+    if (!watch.onLostSalvo || !fleet.salvos.some((salvo) => salvo.id === watch.onLostSalvo)) {
+      // Refused rather than saved half-formed: a watch whose salvo does not
+      // exist is one that will fire into nothing at the worst possible moment.
+      res.status(400).json({ ok: false, reason: 'onLostSalvo must name a salvo that exists' });
+      return;
+    }
+    if (watch.onRestoredSalvo && !fleet.salvos.some((salvo) => salvo.id === watch.onRestoredSalvo)) {
+      res.status(400).json({ ok: false, reason: 'onRestoredSalvo must name a salvo that exists' });
+      return;
+    }
+    failover.save(watch);
+    res.json({ ok: true, watch });
+  });
+
+  app.delete('/api/failover/:id', (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    failover.remove(req.params.id);
+    res.json({ ok: true });
+  });
+
+  app.post('/api/failover/:id/arm', (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    const { armed } = (req.body ?? {}) as { armed?: boolean };
+    const ok = failover.arm(req.params.id, armed !== false);
+    res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  /**
+   * The heartbeat a `heartbeat` probe waits for. Deliberately trivial: whatever
+   * is proving it is alive should be able to do it with one line of anything.
+   */
+  app.post('/api/failover/:id/heartbeat', (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    const ok = failover.heartbeat(req.params.id);
+    res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  app.post('/api/failover/:id/trigger', async (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    const result = await failover.trigger(req.params.id, clientOf(req));
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
+  app.post('/api/failover/:id/restore', async (req, res) => {
+    if (!failover) {
+      res.status(503).json(noFailover);
+      return;
+    }
+    const result = await failover.restore(req.params.id, clientOf(req));
     res.status(result.ok ? 200 : 409).json(result);
   });
 

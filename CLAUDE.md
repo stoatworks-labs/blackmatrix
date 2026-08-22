@@ -14,6 +14,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 
 ## Layout (packages/)
 - `videohub` — `@av/videohub`, protocol server AND client, no ATEM knowledge
+- `ascii` — `@av/ascii-matrix`, plain-text line protocol (TCP+UDP), no ATEM knowledge
 - `matrix` — `@av/atem-matrix`, AtemState → destinations/legality/routing, no I/O
 - `server` — `@blackmatrix/server`
 - `web` — `@blackmatrix/web`
@@ -27,3 +28,6 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Devices are `RoutableDevice`: ATEM (real/mock/replayed capture) or Videohub. A Videohub owns its own locks.
 - `npm run capture -- <address>` takes a capture off hardware; `"capture": "<file>"` replays it as a device.
 - Ties make one destination follow another across boxes, one level deep.
+- Failover watches fire an ordinary salvo. Disarmed by default, latching, and never before the watched thing has been seen working once. See `docs/failover.md`.
+- A refused route is invisible to a media server (ACK + unchanged status), so a lock silently defeats a failover — `videohub.failoverClients` walks through locks.
+- Line protocol is one-based; Videohub is zero-based. Mock ports override with `BLACKMATRIX_PORT` / `_VIDEOHUB_BASE_PORT` / `_ASCII_PORT` / `_MOCK_ROUTER_PORT`.

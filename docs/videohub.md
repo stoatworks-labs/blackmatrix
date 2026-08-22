@@ -27,7 +27,14 @@ source to another ATEM's bus is not a thing that can happen.
 | Monitoring outputs, serial ports, processing units | None. Those blocks are not sent, as the spec requires for a device without them |
 
 Input and output numbering start at **zero**, matching the protocol (port 1 on a
-chassis is port 0 on the wire).
+chassis is port 0 on the wire). This app's own line protocol is one-based, which
+is the usual convention there — see [failover.md](failover.md).
+
+An output whose current source this app cannot name is **left out of the routing
+block** rather than reported as `-1`. The protocol has no way to say "not
+routed": every line is an input index, and a real Videohub always has one. A
+missing line is something every client already copes with, because a status
+update carries only what changed.
 
 ## Refusals
 
@@ -58,11 +65,21 @@ out-of-range request gets `NAK` instead.
 - `VIDEO OUTPUT LOCKS` — dump and set, including `F` to force
 - Status-dump requests (send a bare header), `PING:`, `ACK` / `NAK`
 - Pushed status updates when anyone changes anything, including from the browser
+- `END PRELUDE` closing the opening dump. Not in the published v2.3 document,
+  but real firmware sends it — an ATEM's own Videohub server, at protocol 2.7,
+  does — and a client written against a real router may wait for it. Clients
+  that do not know it ignore it, so sending it costs nothing.
+- A **bare request for a section this device has none of** (monitoring outputs,
+  serial ports, processing units, frame buffers, the status blocks) is answered
+  with `ACK` and an empty block. A `NAK` there reads as a broken router to a
+  control system that probes for what it can find. *Setting* one of those is
+  still a `NAK`.
 
 ## Not implemented
 
 - Monitoring outputs, serial ports, processing units, frame buffers — an ATEM has
-  no equivalent, so the blocks are omitted rather than faked
+  no equivalent, so the blocks are omitted rather than faked (a bare request for
+  one is answered empty rather than refused, as above)
 - `VIDEO INPUT STATUS` / `VIDEO OUTPUT STATUS` — those describe Universal Videohub
   pluggable cards
 - The RS-422 ("Leitch") protocol
@@ -89,6 +106,16 @@ five. Pointed at this app, it gets all of them.
 
 So: use the switcher's own server if five outputs is what you need. This one is
 for when it is not.
+
+## Making a third-party driver happy
+
+A media server driving this for redundancy is a client written against a real
+router, not against the 2018 document, so three settings exist for it:
+`videohub.modelName` (some drivers check the model string before they will
+talk), `videohub.protocolVersion`, and `videohub.failoverClients` — addresses
+whose routes are not refused by a lock, because a refusal is answered with `ACK`
+and an unchanged status, which a media server never reads. All of it is in
+[failover.md](failover.md).
 
 ## Driving a real Videohub
 

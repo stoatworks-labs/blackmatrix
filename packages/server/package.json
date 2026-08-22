@@ -13,6 +13,7 @@
     "capture": "tsx src/tools/capture.ts"
   },
   "dependencies": {
+    "@av/ascii-matrix": "*",
     "@av/atem-matrix": "*",
     "@av/videohub": "*",
     "atem-connection": "^3.9.0",

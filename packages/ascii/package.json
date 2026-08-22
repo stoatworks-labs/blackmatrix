@@ -1,0 +1,23 @@
+{
+  "name": "@av/ascii-matrix",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "description": "Portable plain-text line protocol for router crosspoints, for control systems that cannot speak Videohub",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

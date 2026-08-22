@@ -37,6 +37,17 @@ export function useSimulatorFleet(): FleetApi {
       const result = fleet.takeSalvo(id);
       setError(result.ok ? null : result.failures.join('; '));
     },
+    saveWatch: async (watch) => fleet.saveWatch(watch),
+    deleteWatch: async (id) => fleet.deleteWatch(id),
+    armWatch: async (id, armed) => fleet.armWatch(id, armed),
+    triggerWatch: async (id) => {
+      const result = fleet.fireWatch(id, 'lost');
+      setError(result.ok ? null : result.failures.join('; '));
+    },
+    restoreWatch: async (id) => {
+      const result = fleet.fireWatch(id, 'restored');
+      setError(result.ok ? null : result.failures.join('; '));
+    },
     addDevice: async () => {
       setNotice('In the demo, devices are picked from the model list rather than found by address.');
     },

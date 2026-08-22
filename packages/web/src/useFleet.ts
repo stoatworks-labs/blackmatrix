@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DeviceInput, DiscoverResult, FleetSnapshot } from './types';
+import type { DeviceInput, DiscoverResult, FailoverWatch, FleetSnapshot } from './types';
 
 export interface FleetApi {
   snapshot: FleetSnapshot | null;
@@ -11,6 +11,12 @@ export interface FleetApi {
   saveSalvo: (salvo: { id?: string; name: string; crosspoints: FleetSnapshot['salvos'][number]['crosspoints'] }) => Promise<void>;
   deleteSalvo: (id: string) => Promise<void>;
   takeSalvo: (id: string) => Promise<void>;
+  saveWatch: (watch: FailoverWatch) => Promise<void>;
+  deleteWatch: (id: string) => Promise<void>;
+  armWatch: (id: string, armed: boolean) => Promise<void>;
+  /** Fire the lost salvo by hand — the "replace this machine now" button. */
+  triggerWatch: (id: string) => Promise<void>;
+  restoreWatch: (id: string) => Promise<void>;
   addDevice: (device: DeviceInput) => Promise<void>;
   updateDevice: (id: string, patch: Partial<DeviceInput>) => Promise<void>;
   removeDevice: (id: string) => Promise<string[]>;
@@ -72,7 +78,15 @@ export function useFleet(): FleetApi {
       socket.onopen = () => setConnected(true);
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data as string) as FleetSnapshot & { type: string };
-        if (message.type === 'snapshot') setSnapshot({ devices: message.devices, salvos: message.salvos });
+        if (message.type === 'snapshot') {
+          setSnapshot({
+            devices: message.devices,
+            salvos: message.salvos,
+            // An older server sends no failover at all; an empty list reads the
+            // same way in the UI as "none configured", which is the truth.
+            failover: message.failover ?? [],
+          });
+        }
       };
       socket.onclose = () => {
         setConnected(false);
@@ -115,6 +129,15 @@ export function useFleet(): FleetApi {
         if (!response.ok) throw new Error('could not delete salvo');
       }),
     takeSalvo: (id) => guard(() => post(`/api/salvos/${id}/take`)),
+    saveWatch: (watch) => guard(() => post('/api/failover', watch)),
+    deleteWatch: (id) =>
+      guard(async () => {
+        const response = await fetch(`/api/failover/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('could not delete that watch');
+      }),
+    armWatch: (id, armed) => guard(() => post(`/api/failover/${id}/arm`, { armed })),
+    triggerWatch: (id) => guard(() => post(`/api/failover/${id}/trigger`)),
+    restoreWatch: (id) => guard(() => post(`/api/failover/${id}/restore`)),
     addDevice: (device) => guard(() => post('/api/devices', device)),
     updateDevice: (id, patch) => guard(() => request(`/api/devices/${id}`, 'PATCH', patch)),
     removeDevice: async (id) => {

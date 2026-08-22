@@ -7,7 +7,7 @@ import {
   type MatrixModel,
 } from '@av/atem-matrix';
 import type { AtemState } from 'atem-connection';
-import type { DeviceView, FleetSnapshot, Salvo } from '../types';
+import type { DeviceView, FailoverView, FailoverWatch, FleetSnapshot, Salvo } from '../types';
 import { CATALOGUE, type CatalogueEntry } from './catalogue';
 
 /**
@@ -34,6 +34,7 @@ const STORE_KEY = 'blackmatrix.simulator.v1';
 export class SimulatedFleet {
   private devices: SimDevice[] = [];
   private salvoList: Salvo[] = [];
+  private watchList: FailoverView[] = [];
   private listeners = new Set<() => void>();
   private counter = 0;
 
@@ -59,6 +60,7 @@ export class SimulatedFleet {
         JSON.stringify({
           devices: this.devices.map((device) => ({ id: device.id, name: device.name, entry: device.entry.id })),
           salvos: this.salvoList,
+          failover: this.watchList,
         }),
       );
     } catch {
@@ -73,12 +75,21 @@ export class SimulatedFleet {
       const stored = JSON.parse(raw) as {
         devices?: Array<{ id: string; name: string; entry: string }>;
         salvos?: Salvo[];
+        failover?: FailoverView[];
       };
       for (const device of stored.devices ?? []) {
         const entry = CATALOGUE.find((candidate) => candidate.id === device.entry);
         if (entry) this.create(entry, device.name, device.id);
       }
       this.salvoList = stored.salvos ?? [];
+      // A watch comes back disarmed and unfired: what a reload proves is that
+      // the configuration survived, not that anything is still switched over.
+      this.watchList = (stored.failover ?? []).map((watch) => ({
+        ...watch,
+        armed: false,
+        state: 'unknown',
+        firedAt: null,
+      }));
     } catch {
       /* a corrupt store is not worth failing over — start empty */
     }
@@ -225,6 +236,58 @@ export class SimulatedFleet {
     return { ok: failures.length === 0, failures };
   }
 
+  // --- failover ----------------------------------------------------------
+  //
+  // No probe runs here: a browser cannot open a socket to a machine to see
+  // whether it is alive, and a demo must not pretend it did. What the simulator
+  // does is the half that is honest — a watch can be built, armed, fired and
+  // restored by hand, and firing it takes a real salvo across the simulated
+  // switchers. The polling is the server's job and says so on the page.
+
+  saveWatch(watch: FailoverWatch): void {
+    const view: FailoverView = {
+      ...watch,
+      state: 'unknown',
+      goodRun: 0,
+      badRun: 0,
+      everHealthy: false,
+      lastProbeAt: null,
+      lastChangeAt: null,
+      firedAt: null,
+      lastReason: 'nothing is polled in the demo — use Take over and Restore',
+    };
+    const at = this.watchList.findIndex((candidate) => candidate.id === watch.id);
+    if (at >= 0) this.watchList[at] = { ...this.watchList[at]!, ...watch };
+    else this.watchList.push(view);
+    this.changed();
+  }
+
+  deleteWatch(id: string): void {
+    this.watchList = this.watchList.filter((watch) => watch.id !== id);
+    this.changed();
+  }
+
+  armWatch(id: string, armed: boolean): void {
+    const watch = this.watchList.find((candidate) => candidate.id === id);
+    if (!watch) return;
+    watch.armed = armed;
+    this.changed();
+  }
+
+  fireWatch(id: string, direction: 'lost' | 'restored'): { ok: boolean; failures: string[] } {
+    const watch = this.watchList.find((candidate) => candidate.id === id);
+    if (!watch) return { ok: false, failures: [`no such watch: ${id}`] };
+    const salvoId = direction === 'lost' ? watch.onLostSalvo : watch.onRestoredSalvo;
+    if (!salvoId) return { ok: false, failures: [`that watch has no ${direction} salvo`] };
+
+    const result = this.takeSalvo(salvoId);
+    watch.firedAt = direction === 'lost' ? new Date().toISOString() : null;
+    watch.state = direction === 'lost' ? 'failed' : 'healthy';
+    watch.lastChangeAt = new Date().toISOString();
+    this.changed();
+    return result;
+  }
+
   snapshot(): FleetSnapshot {
     return {
       devices: this.devices.map<DeviceView>((device) => ({
@@ -239,6 +302,7 @@ export class SimulatedFleet {
         locks: device.locks,
       })),
       salvos: this.salvoList,
+      failover: this.watchList,
     };
   }
 }

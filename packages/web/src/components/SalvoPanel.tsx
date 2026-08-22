@@ -22,6 +22,9 @@ interface SalvoPanelProps {
 /**
  * Salvos are the fleet-wide part: one press sets a list of crosspoints across
  * every switcher at once. They live in the app's config, not on any switcher.
+ *
+ * A section rather than the whole column: the failover panel shares it, because
+ * what a failover fires is one of these.
  */
 export function SalvoPanel({
   salvos,
@@ -37,7 +40,7 @@ export function SalvoPanel({
   const deviceName = (id: string): string => devices.find((device) => device.id === id)?.name ?? id;
 
   return (
-    <aside className="salvos">
+    <section className="salvo-panel">
       <header>
         <h2>Salvos</h2>
         <button type="button" className={`build${building ? ' on' : ''}`} onClick={onToggleBuilding}>
@@ -101,6 +104,6 @@ export function SalvoPanel({
         ))}
         {salvos.length === 0 ? <li className="empty">No salvos yet</li> : null}
       </ul>
-    </aside>
+    </section>
   );
 }

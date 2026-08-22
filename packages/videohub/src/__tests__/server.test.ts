@@ -136,7 +136,7 @@ describe('VideohubServer', () => {
   });
 
   it('opens with the full status dump, in protocol order', async () => {
-    const text = await client.wait((t) => t.includes('VIDEO OUTPUT LOCKS:'), 'prelude');
+    const text = await client.wait((t) => t.includes('END PRELUDE:'), 'prelude');
     const order = [
       'PROTOCOL PREAMBLE:',
       'VIDEOHUB DEVICE:',
@@ -144,6 +144,7 @@ describe('VideohubServer', () => {
       'OUTPUT LABELS:',
       'VIDEO OUTPUT ROUTING:',
       'VIDEO OUTPUT LOCKS:',
+      'END PRELUDE:',
     ].map((header) => text.indexOf(header));
     expect(order.every((position) => position >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -154,7 +155,9 @@ describe('VideohubServer', () => {
     expect(text).toContain('Video outputs: 4');
     expect(text).toContain('0 Cam 1');
     expect(text).toContain('0 Aux 1');
-    expect(text).toContain('3 -1');
+    // Output 3 is taking a source the backend cannot name. The protocol has no
+    // way to say that, so the line is left out rather than sent as `3 -1`.
+    expect(text).not.toContain('3 -1');
     expect(text).toContain('0 U');
   });
 
@@ -172,7 +175,10 @@ describe('VideohubServer', () => {
     client.send('VIDEO OUTPUT ROUTING:\n3 1\n\n');
     const text = await client.wait((t) => t.includes('VIDEO OUTPUT ROUTING:'), 'routing echo');
     expect(text.startsWith('ACK\n\n')).toBe(true);
-    expect(text).toContain('VIDEO OUTPUT ROUTING:\n3 -1\n');
+    // The refusal is an ACK and an unchanged status, as the spec requires. The
+    // status here is empty because the unchanged value is one that cannot be
+    // put on the wire — which is still the truthful answer: nothing moved.
+    expect(text).toContain('VIDEO OUTPUT ROUTING:\n\n');
     expect(router.routing[3]).toBe(-1);
   });
 
@@ -267,5 +273,81 @@ describe('VideohubServer', () => {
     client.clear();
     client.send('OUTPUT LABELS:\n1 Nope\n\n');
     expect(await client.wait((t) => t.includes('NAK'), 'nak')).toBe('NAK\n\n');
+  });
+});
+
+/**
+ * The parts that exist for third-party control systems rather than for panels.
+ *
+ * A media server driving a matrix on failover is a client written against a
+ * real Videohub, not against the 2018 document — so it may wait for a block the
+ * document does not mention, and it may check the model name before it will
+ * talk at all. These are cheap to satisfy and expensive to discover on a show.
+ */
+describe('VideohubServer, for third-party drivers', () => {
+  let router: FakeRouter;
+  let server: VideohubServer;
+  let client: Client;
+
+  afterEach(async () => {
+    client?.close();
+    await server?.stop();
+  });
+
+  async function open(options: Partial<{ modelName: string; protocolVersion: string; endPrelude: boolean }> = {}) {
+    router = new FakeRouter();
+    server = new VideohubServer({ backend: router, port: 0, host: '127.0.0.1', ...options });
+    await server.start();
+    client = await connect(server.port);
+  }
+
+  it('closes the opening dump with END PRELUDE, as real firmware does', async () => {
+    await open();
+    const text = await client.wait((t) => t.includes('END PRELUDE:'), 'end prelude');
+    // Last, and after the locks — a client that waits for it has everything.
+    expect(text.indexOf('END PRELUDE:')).toBeGreaterThan(text.indexOf('VIDEO OUTPUT LOCKS:'));
+  });
+
+  it('can be told not to, for a client that chokes on an unknown block', async () => {
+    await open({ endPrelude: false });
+    const text = await client.wait((t) => t.includes('VIDEO OUTPUT LOCKS:'), 'prelude');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(text).not.toContain('END PRELUDE');
+  });
+
+  it('reports an overridden model name and protocol version', async () => {
+    await open({ modelName: 'Blackmagic Smart Videohub 12G', protocolVersion: '2.8' });
+    const text = await client.wait((t) => t.includes('VIDEO OUTPUT LOCKS:'), 'prelude');
+    expect(text).toContain('Model name: Blackmagic Smart Videohub 12G');
+    expect(text).toContain('Version: 2.8');
+  });
+
+  it('answers a request for a section it has none of, rather than NAKing it', async () => {
+    await open();
+    await client.wait((t) => t.includes('END PRELUDE:'), 'prelude');
+    client.clear();
+    client.send('VIDEO MONITORING OUTPUT ROUTING:\n\n');
+    const text = await client.wait((t) => t.includes('VIDEO MONITORING OUTPUT ROUTING:'), 'empty section');
+    expect(text.startsWith('ACK\n\n')).toBe(true);
+    expect(text).not.toContain('NAK');
+  });
+
+  it('still NAKs a header nobody has heard of', async () => {
+    await open();
+    await client.wait((t) => t.includes('END PRELUDE:'), 'prelude');
+    client.clear();
+    client.send('BISCUITS:\n\n');
+    const text = await client.wait((t) => t.includes('NAK'), 'nak');
+    expect(text).toContain('NAK');
+  });
+
+  it('applies every line of a multi-line routing block, which is what a failover salvo is', async () => {
+    await open();
+    await client.wait((t) => t.includes('END PRELUDE:'), 'prelude');
+    client.clear();
+    // disguise fans one feed out to several matrix outputs in one command.
+    client.send('VIDEO OUTPUT ROUTING:\n0 2\n1 2\n2 2\n\n');
+    await client.wait((t) => t.includes('VIDEO OUTPUT ROUTING:'), 'routing echo');
+    expect(router.routing.slice(0, 3)).toEqual([2, 2, 2]);
   });
 });

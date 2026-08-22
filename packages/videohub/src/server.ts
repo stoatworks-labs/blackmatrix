@@ -18,6 +18,33 @@ export interface VideohubServerOptions {
   host?: string;
   /** Called with human-readable progress; defaults to silence. */
   log?: (message: string) => void;
+  /**
+   * What to report in `PROTOCOL PREAMBLE`. Defaults to the version this
+   * implementation was written against.
+   *
+   * Worth raising only if a client refuses to talk to an older router: the
+   * number is a promise about which blocks exist, and claiming 2.7 while
+   * serving 2.3's blocks is a lie a client is entitled to act on.
+   */
+  protocolVersion?: string;
+  /**
+   * Overrides the backend's `Model name`. A backend that is not a Videohub
+   * reports what it actually is — an ATEM reports its own model — and some
+   * third-party drivers check that string before they will drive the router at
+   * all. This is the escape hatch for those, and it is off by default because
+   * lying about the model in the general case makes every log harder to read.
+   */
+  modelName?: string;
+  /**
+   * Send `END PRELUDE:` after the opening status dump. On by default.
+   *
+   * It is not in the published v2.3 document, but real Blackmagic firmware
+   * sends it — verified on an ATEM's own Videohub server, which reports
+   * protocol 2.7 — and a client written against a real router may wait for it
+   * before it considers itself connected. Clients that do not know it ignore
+   * it, as the spec tells them to, so sending it is free.
+   */
+  endPrelude?: boolean;
 }
 
 interface Client {
@@ -36,6 +63,35 @@ const HEADER_ROUTING = 'VIDEO OUTPUT ROUTING';
 const HEADER_LOCKS = 'VIDEO OUTPUT LOCKS';
 const HEADER_PREAMBLE = 'PROTOCOL PREAMBLE';
 const HEADER_PING = 'PING';
+const HEADER_END_PRELUDE = 'END PRELUDE';
+
+/**
+ * Blocks a real Videohub omits when it has none of that kind of port, which is
+ * every one of them here: an ATEM has no monitoring outputs, serial ports,
+ * processing units or frame buffers.
+ *
+ * They are answered rather than NAK'd. A client that probes for a section it
+ * cannot see in the prelude is asking a reasonable question, and "that section
+ * is empty" is a better answer than "I did not understand you" — a NAK reads as
+ * a broken router, and at least one control system treats it as one.
+ */
+const EMPTY_SECTIONS = new Set([
+  'MONITORING OUTPUT LABELS',
+  'SERIAL PORT LABELS',
+  'VIDEO MONITORING OUTPUT ROUTING',
+  'SERIAL PORT ROUTING',
+  'PROCESSING UNIT ROUTING',
+  'FRAME LABELS',
+  'FRAME BUFFER ROUTING',
+  'MONITORING OUTPUT LOCKS',
+  'SERIAL PORT LOCKS',
+  'PROCESSING UNIT LOCKS',
+  'FRAME BUFFER LOCKS',
+  'SERIAL PORT DIRECTIONS',
+  'VIDEO INPUT STATUS',
+  'VIDEO OUTPUT STATUS',
+  'SERIAL PORT STATUS',
+]);
 
 /**
  * Serves the Videohub Ethernet Protocol on TCP 9990 (by default) for whatever
@@ -48,6 +104,11 @@ export class VideohubServer {
   private readonly host: string;
   private readonly backend: RouterBackend;
   private readonly log: (message: string) => void;
+  private readonly protocolVersion: string;
+  private readonly modelName: string | undefined;
+  private readonly endPrelude: boolean;
+  /** Outputs already complained about, so an unroutable one is logged once. */
+  private warnedOutputs = new Set<number>();
   private server: net.Server | null = null;
   private clients = new Set<Client>();
   private unsubscribe: (() => void) | null = null;
@@ -57,6 +118,9 @@ export class VideohubServer {
     this.port = options.port ?? 9990;
     this.host = options.host ?? '0.0.0.0';
     this.log = options.log ?? (() => {});
+    this.protocolVersion = options.protocolVersion ?? PROTOCOL_VERSION;
+    this.modelName = options.modelName;
+    this.endPrelude = options.endPrelude ?? true;
   }
 
   get clientCount(): number {
@@ -131,17 +195,18 @@ export class VideohubServer {
 
   /** The full state dump every client gets on connect. */
   private sendPrelude(client: Client): void {
-    this.write(client, formatBlock(HEADER_PREAMBLE, [`Version: ${PROTOCOL_VERSION}`]));
+    this.write(client, formatBlock(HEADER_PREAMBLE, [`Version: ${this.protocolVersion}`]));
     this.write(client, this.deviceBlock());
     this.write(client, formatBlock(HEADER_INPUT_LABELS, indexedLines(this.backend.getInputLabels())));
     this.write(client, formatBlock(HEADER_OUTPUT_LABELS, indexedLines(this.backend.getOutputLabels())));
     this.write(client, this.routingBlock());
     this.write(client, this.locksBlock(client));
+    if (this.endPrelude) this.write(client, formatBlock(HEADER_END_PRELUDE));
   }
 
   private deviceBlock(): string {
     const info = this.backend.getInfo();
-    const lines = ['Device present: true', `Model name: ${info.modelName}`];
+    const lines = ['Device present: true', `Model name: ${this.modelName ?? info.modelName}`];
     if (info.friendlyName) lines.push(`Friendly name: ${info.friendlyName}`);
     if (info.uniqueId) lines.push(`Unique ID: ${info.uniqueId}`);
     lines.push(
@@ -154,9 +219,28 @@ export class VideohubServer {
     return formatBlock(HEADER_DEVICE, lines);
   }
 
+  /**
+   * `VIDEO OUTPUT ROUTING`, minus any output whose source this app cannot name.
+   *
+   * A backend reports -1 for "not routed", which the protocol has no way to
+   * say: every line is an input index, and a real Videohub always has one.
+   * Sending `0 -1` invites a client to parse it as input -1, or to reject the
+   * block entirely. Leaving the line out is what the protocol already does for
+   * anything unchanged, so a client is built to cope with its absence.
+   */
   private routingBlock(outputs?: number[]): string {
     const routing = this.backend.getRouting();
-    return formatBlock(HEADER_ROUTING, indexedLines(routing.map(String), outputs));
+    const wanted = outputs ?? routing.map((_, index) => index);
+    const routable = wanted.filter((index) => {
+      const input = routing[index];
+      if (input !== undefined && input >= 0) return true;
+      if (!this.warnedOutputs.has(index)) {
+        this.warnedOutputs.add(index);
+        this.log(`output ${index} is taking a source this app cannot name — left out of the routing block`);
+      }
+      return false;
+    });
+    return formatBlock(HEADER_ROUTING, indexedLines(routing.map(String), routable));
   }
 
   private locksBlock(client: Client, outputs?: number[]): string {
@@ -175,10 +259,15 @@ export class VideohubServer {
 
     // A header with no lines is a request to re-dump that block.
     if (lines.length === 0) {
+      if (EMPTY_SECTIONS.has(header)) {
+        this.write(client, ACK);
+        this.write(client, formatBlock(header));
+        return;
+      }
       switch (header) {
         case HEADER_PREAMBLE:
           this.write(client, ACK);
-          this.write(client, formatBlock(HEADER_PREAMBLE, [`Version: ${PROTOCOL_VERSION}`]));
+          this.write(client, formatBlock(HEADER_PREAMBLE, [`Version: ${this.protocolVersion}`]));
           return;
         case HEADER_DEVICE:
           this.write(client, ACK);

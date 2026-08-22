@@ -27,8 +27,9 @@ that is not "what source is this bus taking" probably belongs in overseer.
 
 ```
 packages/
-  videohub   @av/videohub     protocol + TCP server, zero ATEM knowledge
-  matrix     @av/atem-matrix  AtemState -> destinations/sources/legality/routing calls, zero I/O
+  videohub   @av/videohub      protocol + TCP server AND client, zero ATEM knowledge
+  ascii      @av/ascii-matrix  plain-text line protocol over TCP/UDP, zero ATEM knowledge
+  matrix     @av/atem-matrix   AtemState -> destinations/sources/legality/routing calls, zero I/O
   server     @blackmatrix/server
   web        @blackmatrix/web
 ```
@@ -36,9 +37,15 @@ packages/
 **`build:libs` runs before server or web.** The dev, build and test scripts do it
 for you; phantom type errors usually mean it did not.
 
-Keep the two libraries portable. `@av/videohub` should stay usable to put a
-Videohub front end on anything with crosspoints; `@av/atem-matrix` should stay
-free of sockets and files, which is what makes it testable with no hardware.
+Keep the three libraries portable. `@av/videohub` should stay usable to put a
+Videohub front end on anything with crosspoints, `@av/ascii-matrix` a line
+protocol on the same; `@av/atem-matrix` should stay free of sockets and files,
+which is what makes it testable with no hardware.
+
+`@av/ascii-matrix` deliberately does **not** reuse `RouterBackend` from
+`@av/videohub`. That interface is the shape of one Videohub; this protocol is
+fleet-wide — it names devices, fires salvos and triggers failover watches, none
+of which a Videohub has any idea about.
 
 ## 3a. Three device kinds, one interface
 
@@ -55,6 +62,29 @@ matrix and applies its own crosspoints. Three implementations:
 The model types (`MatrixModel`, `Destination`, `Source`, `Section`) live in
 `@av/atem-matrix` but are router-generic — `SectionId` is a plain string and each device
 declares its own sections. Only the *builders* in that package are ATEM-specific.
+
+## 3b. Redundancy is routing, so it lives here
+
+`failover.ts` watches something (a TCP port, a URL, or a heartbeat it must be
+sent) and **fires an ordinary salvo** when it stops answering. That salvos are
+the mechanism is the point: an operator can rehearse the failover by pressing
+Take, which is the only way anybody finds out it does what they meant.
+
+The rules that are not obvious and should not be softened:
+
+- **Nothing fires until the main system has been seen working once**
+  (`requireHealthyFirst`). At power-up an unbooted rack is indistinguishable
+  from a dead one.
+- **Watches start disarmed**, and a disarmed watch still probes and reports.
+- **It latches**: no automatic switch back unless `onRestoredSalvo` says what
+  back means.
+- **A manual trigger works while disarmed**, and its crosspoints are attributed
+  to the watch, not to whoever pressed it — a failover by hand has to behave
+  exactly like a failover by probe, because the route client is what lock
+  ownership is compared against.
+
+`docs/failover.md` has the survey of how disguise and PIXERA actually do this,
+and what to type into their fields. Read it before changing the wire formats.
 
 ## 4. Commands
 
@@ -130,6 +160,25 @@ into one entry that steers toward adding it as a switcher.
   from a device's index — an index-derived port silently moves when another device is
   removed, and every panel button then means something else.
 - **A device id is immutable.** Salvos, ties and labels are keyed on it.
+- **A refused route is invisible to a media server.** ACK plus an unchanged
+  status is what the spec requires and what a driver that fires and forgets
+  cannot see, so a locked destination is a failover that silently does not
+  happen. `videohub.failoverClients` / `ascii.failoverClients` name the addresses
+  allowed through a lock — by address, because that is the only identity either
+  protocol has. Legality is never overridden.
+- **The routing block never carries `-1`.** A backend says -1 for "not routed";
+  the protocol has no way to say it, so the line is omitted. Do not "fix" this
+  by sending 0.
+- **`END PRELUDE` is sent even though the published v2.3 spec has no such
+  block** — real firmware does, and a client written against a real router may
+  wait for it.
+- **The line protocol is one-based and the Videohub protocol is zero-based.**
+  Both are right for their conventions. The conversion happens in one place,
+  `ascii/protocol.ts`, and the server says which base it uses in its greeting.
+- **The mock's ports are overridable** (`BLACKMATRIX_PORT`,
+  `BLACKMATRIX_VIDEOHUB_BASE_PORT`, `BLACKMATRIX_ASCII_PORT`,
+  `BLACKMATRIX_MOCK_ROUTER_PORT`) so a second copy can be started beside a
+  running one. Before that, a second mock silently lost every port to the first.
 
 ## 7. Status — be precise about it
 
