@@ -2,6 +2,7 @@ import { AtemStateUtil, Enums, type AtemState } from 'atem-connection';
 import { describe, expect, it } from 'vitest';
 import { applyRoute, type AtemRouterCommands } from '../apply.js';
 import { buildDestinations, buildMatrix, buildSources, readRoute, readRoutes } from '../model.js';
+import { buildSimulatedState, type SwitcherProfile } from '../simulate.js';
 import { applyRouteToState } from '../mutate.js';
 import { isLegal } from '../validity.js';
 import * as Local from '../enums.js';
@@ -225,11 +226,53 @@ describe('buildDestinations', () => {
     expect(find(destinations, 'mv.0.window.1').caveat).toBeUndefined();
   });
 
+  it('builds no multiview windows for a switcher whose multiview is fixed', () => {
+    // An ATEM Mini Pro shows ten multiview windows and routes none of them; the
+    // base Mini has no multiview output at all. A profile says so with zero
+    // windows, or zero multiviewers, and either way the grid must not offer a
+    // crosspoint the hardware would ignore.
+    const fixed = buildDestinations(
+      buildSimulatedState({ ...miniProfile(), multiviewers: 1, mvWindows: 0 }, 0),
+    );
+    expect(fixed.filter((destination) => destination.kind === 'mvWindow')).toHaveLength(0);
+
+    const none = buildDestinations(
+      buildSimulatedState({ ...miniProfile(), multiviewers: 0, mvWindows: 0 }, 0),
+    );
+    expect(none.filter((destination) => destination.section === 'multiview')).toHaveLength(0);
+
+    // And a switcher that does route its windows still gets them.
+    const extreme = buildDestinations(
+      buildSimulatedState({ ...miniProfile(), multiviewers: 1, mvWindows: 16 }, 0),
+    );
+    expect(extreme.filter((destination) => destination.kind === 'mvWindow')).toHaveLength(16);
+  });
+
   it('labels aux destinations with the switcher’s own names for those outputs', () => {
     expect(find(destinations, 'aux.0').label).toBe('Output 1');
     expect(find(destinations, 'aux.1').label).toBe('Output 2');
   });
 });
+
+/** A Mini-shaped profile, as the browser simulator's model list declares one. */
+function miniProfile(): SwitcherProfile {
+  return {
+    product: 'ATEM Mini Pro',
+    inputs: 4,
+    mixEffects: 1,
+    usksPerMe: 1,
+    auxes: 1,
+    dsks: 1,
+    superSources: 0,
+    ssrcBoxes: 4,
+    multiviewers: 1,
+    mvWindows: 0,
+    mediaPlayers: 1,
+    colourGenerators: 2,
+    cleanFeeds: 1,
+    inputPorts: () => ({ available: [Enums.ExternalPortType.HDMI], current: Enums.ExternalPortType.HDMI }),
+  };
+}
 
 function oneMeState(): AtemState {
   const state = twoMeState();

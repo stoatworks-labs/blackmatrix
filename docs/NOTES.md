@@ -53,6 +53,17 @@ real Videohub panel**, and no real Videohub has ever been a device.
   sources; clean feed has `meAvailability: NONE`.
 - The Mini Extreme ISO reports `multiviewer.windowCount: 1` while actually having
   **16** windows — trust `settings.multiViewers[].windows.length`, not that field.
+- **Only the Extreme models route their multiview windows** (tester, 2026-08-24). The
+  base **ATEM Mini has no multiview output at all**; the **Mini Pro and Mini Pro ISO**
+  have a **fixed ten-window layout** — four inputs, preview, program, stream/record
+  status — that takes no source. The simulator's model list offered all ten as
+  crosspoints; it now declares zero routable windows for those (`mvWindows: 0`, or
+  `multiviewers: 0` for the base Mini) and the Multiview section simply does not
+  appear. The SDI twins are assumed to match their Mini counterparts. **Untested
+  against real Mini Pro hardware** — if one ever turns up, `npm run capture` it and
+  see whether the switcher reports its windows at all, because the app's per-device
+  rule is still "trust the state", and a real Mini Pro connected today would still
+  offer whatever windows it reports.
 
 Facts that cost time to establish:
 
@@ -68,6 +79,19 @@ Facts that cost time to establish:
   panel. Append, never insert.
 - **Videohub locks are per IP address, not per connection** (the spec says so), so
   two panels on one machine share a lock, and the browser at the same address does too.
+  **That is why the padlock in the UI looked dead** (tester, 2026-08-24): the browser
+  that took the lock *was* its owner, and an owner routes through its own lock — the
+  one client the lock did not stop was the one that set it. Fixed 2026-08-24 by
+  splitting the rule by surface: the HTTP API (browser, phone app) passes
+  `ownLockHolds`, so it holds against its own owner; the Videohub and ASCII bridges
+  pass nothing and keep the spec's per-IP ownership.
+- **The UI calls it a CLAIM, not a lock** (Allan, 2026-08-24). A padlock reads as
+  "nothing can change this row", which is a promise about the hardware that nothing
+  here can make; what the button actually does is *take* the row — claim ownership,
+  then soft-lock it in the app so the line crosshatches and nobody edits it, the
+  claimant included. So the browser says claim/release and shows a flag; the API,
+  the snapshot field and the protocol still say `lock`/`unlock`/`force`, because on
+  the wire that is what it is. Do not rename the wire side to match the UI.
 - **A refused route is `ACK` + unchanged status, not `NAK`** — NAK is only for
   malformed/out-of-range. The spec's own model: the client must believe the status
   update, not its own request.

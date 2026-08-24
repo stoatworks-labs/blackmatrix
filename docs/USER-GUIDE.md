@@ -107,14 +107,22 @@ Full mapping and a worked telnet session: [videohub.md](videohub.md).
 
 ---
 
-## Locks
+## Claims
 
-A destination can be locked, from the browser or from a panel. **Locks are held per IP address**,
-which is how a real Videohub does it — so a second panel on the same machine shares the lock, and
-everyone else is refused. Shift-click the padlock (or send `F` on the wire) to force one open.
+A destination can be **claimed** — the flag on its row in the browser, or a lock from a panel.
+They are the same thing under different names: the app says claim, the Videohub protocol says lock.
+**Claims are held per IP address**, which is how a real Videohub does it, so a second panel on the
+same machine shares one and everyone else is refused. Shift-click the flag (or send `F` on the
+wire) to force one open.
 
-Locking is enforced in one place, so a lock taken from a panel refuses a route made from the
-browser, and the other way round.
+It is enforced in one place, so a claim made from a panel refuses a route made from the browser,
+and the other way round.
+
+**A claim stops you as well — that is the point of it.** Claim a row and it crosshatches: its
+crosspoints stop taking clicks, it cannot be staged into a take, and the flag is how you give it
+back. The Videohub rule is that whoever holds a lock may still route through it, and panels keep
+that, but the browser and the phone app sit at an address like anything else — so a claim that let
+the claimant route would stop nobody standing at the screen.
 
 ---
 

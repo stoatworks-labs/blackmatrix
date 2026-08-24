@@ -24,6 +24,9 @@ export function useSimulatorFleet(): FleetApi {
     snapshot,
     connected: true,
     error,
+    // Everything here is this tab, and the simulated fleet says so when it
+    // claims something — so the UI's "claimed by you" test compares equal.
+    address: 'this tab',
     notice,
     clearNotice: () => setNotice(null),
     route: async (deviceId, destination, source) => report(fleet.route(deviceId, destination, source)),

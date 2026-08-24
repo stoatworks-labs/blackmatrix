@@ -48,9 +48,17 @@ export interface RouteResult {
  * `overrideLocks` is the only thing a caller can claim, and only the failover
  * paths claim it: a lock is there to stop a person changing a destination, and
  * a redundancy system taking over is not a person changing their mind.
+ *
+ * `ownLockHolds` is the difference between a protocol client and this app's own
+ * UI. Videohub ownership is per IP and an owner routes straight through its own
+ * lock — that is the spec, and the panels keep it. But the app calls this a
+ * **claim**, and a claim that let the claimant route would stop nobody: the
+ * browser is always the owner of what it just claimed. The HTTP API asks for the
+ * stricter rule; nothing else does.
  */
 export interface RouteOptions {
   overrideLocks?: boolean;
+  ownLockHolds?: boolean;
 }
 
 interface DeviceEntry {
@@ -396,7 +404,8 @@ export class Fleet extends EventEmitter {
 
   /**
    * Route one crosspoint. Refuses when the destination is locked by somebody
-   * else or when the switcher would not accept the source there.
+   * else — or by the caller too, when the caller asked for `ownLockHolds` — and
+   * when the switcher would not accept the source there.
    */
   async route(
     deviceId: string,
@@ -413,9 +422,15 @@ export class Fleet extends EventEmitter {
     if (!destination) return { ok: false, reason: `no such destination: ${destinationId}` };
 
     const owner = this.locksOf(entry)[destinationId] ?? null;
-    if (owner !== null && owner !== client && owner !== 'this app') {
+    const mine = owner === client || owner === 'this app';
+    if (owner !== null && (!mine || options.ownLockHolds === true)) {
       if (!options.overrideLocks) {
-        return { ok: false, reason: `${destination.label} is locked by ${owner}` };
+        return {
+          ok: false,
+          reason: mine
+            ? `${destination.label} is claimed — release it to route`
+            : `${destination.label} is claimed by ${owner}`,
+        };
       }
       // Loudly, and every time. Walking through a lock is the right thing here
       // and still worth an entry in the log somebody reads afterwards.

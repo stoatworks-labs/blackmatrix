@@ -220,7 +220,7 @@ main { display: flex; flex: 1; min-height: 0; }
   color: var(--dim);
   font-size: 10px;
 }
-.section-locked { color: var(--routed); font-size: 10px; }
+.section-claimed { color: var(--routed); font-size: 10px; }
 .section-hint { color: var(--dim); font-size: 11px; }
 .section-inner strong { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
 
@@ -239,7 +239,7 @@ main { display: flex; flex: 1; min-height: 0; }
   border-left: 3px solid transparent;
 }
 .rowhead.hot { background: #1e2530; }
-.rowhead.locked { border-left-color: var(--routed); }
+.rowhead.claimed { border-left-color: var(--routed); }
 .rowhead.kind-program { border-left-color: var(--onair); }
 
 .rowhead-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -278,6 +278,11 @@ main { display: flex; flex: 1; min-height: 0; }
   cursor: pointer;
 }
 .tool.on { border-color: var(--routed); color: var(--routed); }
+/* The claim flag: planted and obvious when the row is held, faded to a hint of
+   itself when it is free, so a grid of free rows does not read as a grid of
+   warnings. Greyscale rather than hidden — the button still has to be findable. */
+.tool.claim { filter: grayscale(1); opacity: 0.45; }
+.tool.claim.on { filter: none; opacity: 1; }
 
 .cellwrap {
   border-bottom: 1px solid var(--line);
@@ -308,6 +313,20 @@ main { display: flex; flex: 1; min-height: 0; }
     #1a1f27 5px
   );
 }
+/* A claimed row. Distinct from blocked: the switcher would take this crosspoint,
+   the claim is what is refusing it — so the route that is up stays readable. */
+.cell.claimed {
+  cursor: not-allowed;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    #2a2118 6px,
+    #2a2118 8px
+  );
+}
+.cell.claimed.routed { opacity: 0.85; }
+
 /* A folded group's column in each row: still says whether the route is inside. */
 .cell.stub {
   background: repeating-linear-gradient(45deg, transparent, transparent 5px, #1a1f27 5px, #1a1f27 6px);
@@ -705,13 +724,15 @@ main > .empty code { color: var(--routed); }
 }
 .mobile-dest:active, .mobile-source:active { background: var(--panel-2); }
 .mobile-dest.staged { border-left-color: var(--routed); }
-.mobile-dest.locked { border-left-color: var(--onair); }
+.mobile-dest.claimed { border-left-color: var(--onair); }
+/* Claimed: the row still says what it is taking, it just will not open. */
+.mobile-dest:disabled { opacity: 0.72; }
 
 .mobile-dest-name { font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .mobile-dest-source { font-size: 12px; color: var(--dim); }
 .mobile-staged { color: var(--routed); }
 .mobile-dest-source .arrow { color: var(--line-strong, var(--dim)); }
-.mobile-lock {
+.mobile-claim {
   padding: 1px 6px;
   border: 1px solid var(--onair);
   border-radius: 8px;

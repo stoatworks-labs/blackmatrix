@@ -16,6 +16,17 @@ function clientOf(req: Request): string {
   return normalizeAddress(req.ip ?? req.socket.remoteAddress ?? undefined);
 }
 
+/**
+ * A claim made through this app holds against this app.
+ *
+ * On the wire a claim is the Videohub protocol's lock, owned per IP — and there
+ * an owner routes through its own lock, which is the spec and what the panels
+ * get. The browser and the phone app are that owner every time, so under the
+ * panel rule a claim would refuse everyone except the person who made it. Over
+ * HTTP, claimed means claimed; release it to route.
+ */
+const UI_LOCKS = { ownLockHolds: true } as const;
+
 export function createApp(fleet: Fleet, port: number, failover?: FailoverController): express.Express {
   const app = express();
   app.use(express.json({ limit: '256kb' }));
@@ -41,6 +52,20 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
 
   app.get('/api/fleet', (_req, res) => {
     res.json(fleet.snapshot());
+  });
+
+  /**
+   * Which address this client is, in the words claims are held in.
+   *
+   * Ownership is an address, so without this the UI can only report "claimed by
+   * 127.0.0.1" — true, unhelpful, and confusing at exactly the moment it is
+   * read, since that address is usually the reader. It cannot ride on the
+   * snapshot: one websocket message goes to every client, and this differs per
+   * client. Same `clientOf` as every route, or the comparison would be against
+   * a different spelling of the same machine.
+   */
+  app.get('/api/whoami', (req, res) => {
+    res.json({ address: clientOf(req) });
   });
 
   // --- managing the devices themselves ------------------------------------
@@ -99,7 +124,7 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
       res.status(400).json({ ok: false, reason: 'expected { destination: string, source: number }' });
       return;
     }
-    const result = await fleet.route(req.params.id, destination, source, clientOf(req));
+    const result = await fleet.route(req.params.id, destination, source, clientOf(req), UI_LOCKS);
     res.status(result.ok ? 200 : 409).json(result);
   });
 
@@ -112,7 +137,7 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
       res.status(400).json({ ok: false, reason: 'expected { crosspoints: [{deviceId, destination, source}] }' });
       return;
     }
-    const result = await fleet.routeBatch(crosspoints, clientOf(req));
+    const result = await fleet.routeBatch(crosspoints, clientOf(req), UI_LOCKS);
     res.status(result.ok ? 200 : 409).json(result);
   });
 
@@ -179,7 +204,7 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
   });
 
   app.post('/api/salvos/:id/take', async (req, res) => {
-    const result = await fleet.takeSalvo(req.params.id, clientOf(req));
+    const result = await fleet.takeSalvo(req.params.id, clientOf(req), UI_LOCKS);
     res.status(result.ok ? 200 : 409).json(result);
   });
 

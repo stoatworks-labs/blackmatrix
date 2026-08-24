@@ -3,6 +3,7 @@ import { isLegal } from '@av/atem-matrix';
 import { groupSources } from '../sourceGroups';
 import type { Crosspoint, RouteMode } from '../takeState';
 import type { DeviceView, Destination } from '../types';
+import { ownerName } from '../claims';
 
 interface MobileRouterProps {
   devices: DeviceView[];
@@ -18,6 +19,8 @@ interface MobileRouterProps {
   onTake: () => void;
   onClear: () => void;
   onUndo: () => void;
+  /** This client's own address, so its own claims read as "you". */
+  self: string | null;
 }
 
 /**
@@ -45,6 +48,7 @@ export function MobileRouter({
   onTake,
   onClear,
   onUndo,
+  self,
 }: MobileRouterProps) {
   const [selected, setSelected] = useState<Destination | null>(null);
 
@@ -132,12 +136,17 @@ export function MobileRouter({
                     <li key={destination.id}>
                       <button
                         type="button"
-                        className={`mobile-dest${stage !== null ? ' staged' : ''}${owner ? ' locked' : ''}`}
+                        className={`mobile-dest${stage !== null ? ' staged' : ''}${owner ? ' claimed' : ''}`}
+                        // A claim holds here too, whoever made it. A phone has
+                        // no claim button of its own — a claim is released where
+                        // it was made — so this simply refuses to open.
+                        disabled={owner !== null}
+                        title={owner ? `Claimed by ${ownerName(owner, self)}` : undefined}
                         onClick={() => setSelected(destination)}
                       >
                         <span className="mobile-dest-name">
                           {destination.label}
-                          {owner ? <span className="mobile-lock">locked</span> : null}
+                          {owner ? <span className="mobile-claim">claimed</span> : null}
                         </span>
                         <span className="mobile-dest-source">
                           {sourceById.get(live) ?? 'unknown'}

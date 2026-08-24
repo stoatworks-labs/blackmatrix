@@ -5,6 +5,12 @@ export interface FleetApi {
   snapshot: FleetSnapshot | null;
   connected: boolean;
   error: string | null;
+  /**
+   * This client's own address, as the server sees it — which is the name every
+   * claim it makes is held under. Null until it answers, and on an older server
+   * that has no `/api/whoami`; the UI then falls back to showing the address.
+   */
+  address: string | null;
   route: (deviceId: string, destination: string, source: number) => Promise<void>;
   lock: (deviceId: string, destination: string, action: 'lock' | 'unlock' | 'force') => Promise<void>;
   labelDestination: (deviceId: string, destination: string, label: string) => Promise<void>;
@@ -65,6 +71,20 @@ export function useFleet(): FleetApi {
   /** Something worth saying that is not a failure — a removal's loose ends. */
   const [notice, setNotice] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/whoami')
+      .then((response) => (response.ok ? (response.json() as Promise<{ address?: string }>) : null))
+      .then((payload) => {
+        if (!cancelled && typeof payload?.address === 'string') setAddress(payload.address);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let closed = false;
@@ -116,6 +136,7 @@ export function useFleet(): FleetApi {
     snapshot,
     connected,
     error,
+    address,
     route: (deviceId, destination, source) =>
       guard(() => post(`/api/devices/${deviceId}/route`, { destination, source })),
     lock: (deviceId, destination, action) =>

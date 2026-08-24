@@ -28,6 +28,14 @@ export interface SwitcherProfile {
   superSources: number;
   ssrcBoxes: number;
   multiviewers: number;
+  /**
+   * Routable multiview windows per multiviewer, which is not the same as how
+   * many windows the operator sees. Zero means a multiview whose windows take
+   * no source — an ATEM Mini Pro's fixed ten-window layout — and zero
+   * multiviewers means no multiview output at all, as on the base ATEM Mini.
+   * Either way no destination is built, because a crosspoint the hardware would
+   * ignore is worse than an absent one.
+   */
   mvWindows: number;
   mediaPlayers: number;
   colourGenerators: number;

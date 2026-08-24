@@ -238,15 +238,24 @@ stable for a given switcher, so a panel's buttons keep meaning the same thing.
 Full mapping, what is and is not implemented, and a worked telnet session:
 **[docs/videohub.md](docs/videohub.md)**.
 
-## Locks
+## Claims
 
-A destination can be locked, from the browser or from a panel. Locks are held
-**per IP address**, which is how a real Videohub does it — so a second panel on
-the same machine shares the lock, and everyone else is refused. Shift-click the
-padlock (or send `F` on the wire) to force one open.
+A destination can be claimed — the flag on its row in the browser, or a lock
+from a panel; they are the same thing, and `docs/videohub.md` calls it what the
+wire calls it. Claims are held **per IP address**, which is how a real Videohub
+does it, so a second panel on the same machine shares one and everyone else is
+refused. Shift-click the flag (or send `F` on the wire) to force one open.
 
-Locking is enforced in one place, so a lock taken from a panel refuses a route
-made from the browser, and the other way round.
+It is enforced in one place, so a claim made from a panel refuses a route made
+from the browser, and the other way round.
+
+**In the app it is a claim, and a claim stops you too.** The flag on each row
+claims that destination: the row crosshatches, its crosspoints stop taking
+clicks, it cannot be staged into a take, and the flag is how you release it.
+That includes the person who made the claim — on the wire an owner may route
+through its own lock, which is the spec and what panels get, but the browser and
+the phone app *are* that owner, so a rule that only stopped other clients would
+stop nobody who could see the button.
 
 ## Salvos
 

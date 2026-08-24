@@ -4,6 +4,7 @@ import { groupSources, type GroupedSources } from '../sourceGroups';
 import { useViewState } from '../useViewState';
 import type { Crosspoint, RouteMode } from '../takeState';
 import type { DeviceView, Destination, Source } from '../types';
+import { ownerName } from '../claims';
 
 interface MatrixProps {
   device: DeviceView;
@@ -13,10 +14,12 @@ interface MatrixProps {
   staged: Record<string, Crosspoint>;
   onRoute: (destination: string, source: number) => void;
   onUnstage: (destination: string) => void;
-  onLock: (destination: string, action: 'lock' | 'unlock' | 'force') => void;
+  onClaim: (destination: string, action: 'lock' | 'unlock' | 'force') => void;
   onRename: (destination: string, label: string) => void;
   onAddToSalvo: ((destination: Destination) => void) | null;
   salvoMembers: Set<string>;
+  /** This client's own address, so its own claims read as "you". */
+  self: string | null;
 }
 
 /**
@@ -31,24 +34,30 @@ interface CellProps {
   /** Waiting for a take. Outlined, never filled: it is not on air yet. */
   staged: boolean;
   legal: boolean;
+  /**
+   * Somebody has claimed the row — possibly this browser. A claim has to stop
+   * the next click on this screen too, or the button is decoration.
+   */
+  claimed: boolean;
   crosshair: boolean;
   title: string;
   onClick: () => void;
 }
 
 /** Memoised so hovering redraws two lines of cells, not the whole grid. */
-const Cell = memo(function Cell({ routed, staged, legal, crosshair, title, onClick }: CellProps) {
+const Cell = memo(function Cell({ routed, staged, legal, claimed, crosshair, title, onClick }: CellProps) {
   const classes = ['cell'];
   if (routed) classes.push('routed');
   if (staged) classes.push('staged');
   if (!legal) classes.push('blocked');
+  if (claimed) classes.push('claimed');
   if (crosshair) classes.push('crosshair');
   return (
     <button
       type="button"
       className={classes.join(' ')}
       title={title}
-      disabled={!legal}
+      disabled={!legal || claimed}
       onClick={onClick}
       aria-pressed={routed}
     >
@@ -64,10 +73,11 @@ export function Matrix({
   staged,
   onRoute,
   onUnstage,
-  onLock,
+  onClaim,
   onRename,
   onAddToSalvo,
   salvoMembers,
+  self,
 }: MatrixProps) {
   const [hoverColumn, setHoverColumn] = useState<number | null>(null);
   const [hoverRow, setHoverRow] = useState<string | null>(null);
@@ -197,7 +207,7 @@ export function Matrix({
 
         {grouped.map(({ section, destinations }) => {
           const closed = view.closedSections.includes(section.id);
-          const lockedHere = destinations.filter((destination) => device.locks[destination.id]).length;
+          const claimedHere = destinations.filter((destination) => device.locks[destination.id]).length;
           return (
             <Fragment key={section.id}>
               <div className="section">
@@ -205,9 +215,9 @@ export function Matrix({
                   <span className="chev">{closed ? '▸' : '▾'}</span>
                   <strong>{section.label}</strong>
                   <span className="section-count">{destinations.length}</span>
-                  {/* Folding a section must not hide a lock — that is exactly
+                  {/* Folding a section must not hide a claim — that is exactly
                       the state someone needs to know about before routing. */}
-                  {lockedHere > 0 ? <span className="section-locked">{lockedHere} locked</span> : null}
+                  {claimedHere > 0 ? <span className="section-claimed">{claimedHere} claimed</span> : null}
                   <span className="section-hint">{section.hint}</span>
                 </button>
               </div>
@@ -226,6 +236,7 @@ export function Matrix({
                           routedSource?.label ?? (routedSourceId < 0 ? 'unknown' : `source ${routedSourceId}`)
                         }
                         owner={device.locks[destination.id] ?? null}
+                        self={self}
                         stagedSource={staged[`${device.id}:${destination.id}`]?.source ?? null}
                         stagedLabel={
                           sourceById.get(staged[`${device.id}:${destination.id}`]?.source ?? -1)?.label ?? null
@@ -240,7 +251,7 @@ export function Matrix({
                         }}
                         onUnfold={toggleGroup}
                         onRoute={onRoute}
-                        onLock={onLock}
+                        onClaim={onClaim}
                         onRename={onRename}
                         onAddToSalvo={onAddToSalvo}
                       />
@@ -269,9 +280,11 @@ interface RowProps {
   onHover: (column: number) => void;
   onUnfold: (groupId: string) => void;
   onRoute: (destination: string, source: number) => void;
-  onLock: (destination: string, action: 'lock' | 'unlock' | 'force') => void;
+  /** The action words are the Videohub protocol's, which is what a claim is on the wire. */
+  onClaim: (destination: string, action: 'lock' | 'unlock' | 'force') => void;
   onRename: (destination: string, label: string) => void;
   onAddToSalvo: ((destination: Destination) => void) | null;
+  self: string | null;
 }
 
 function Row({
@@ -289,15 +302,17 @@ function Row({
   onHover,
   onUnfold,
   onRoute,
-  onLock,
+  onClaim,
   onRename,
   onAddToSalvo,
+  self,
 }: RowProps) {
-  const locked = owner !== null;
+  const claimed = owner !== null;
+  const holder = owner === null ? '' : ownerName(owner, self);
   return (
     <>
       <div
-        className={`rowhead kind-${destination.kind}${rowHot ? ' hot' : ''}${locked ? ' locked' : ''}${
+        className={`rowhead kind-${destination.kind}${rowHot ? ' hot' : ''}${claimed ? ' claimed' : ''}${
           stagedSource !== null ? ' has-staged' : ''
         }`}
       >
@@ -344,13 +359,22 @@ function Row({
               +
             </button>
           ) : null}
+          {/* A claim, not a padlock. The row is not immovable — somebody has
+              taken it, and until they give it back the app will not route it
+              for anyone, themselves included. Underneath it is the Videohub
+              protocol's lock, which is where the wire words come from. */}
           <button
             type="button"
-            className={`tool${locked ? ' on' : ''}`}
-            title={locked ? `Locked by ${owner} — click to unlock, shift-click to force` : 'Lock this destination'}
-            onClick={(event) => onLock(destination.id, locked ? (event.shiftKey ? 'force' : 'unlock') : 'lock')}
+            className={`tool claim${claimed ? ' on' : ''}`}
+            title={
+              claimed
+                ? `Claimed by ${holder} — click to release, shift-click to force it open`
+                : 'Claim this destination — nothing routes it, including you, until it is released'
+            }
+            aria-label={claimed ? `Release ${destination.label}` : `Claim ${destination.label}`}
+            onClick={(event) => onClaim(destination.id, claimed ? (event.shiftKey ? 'force' : 'unlock') : 'lock')}
           >
-            {locked ? '🔒' : '🔓'}
+            🚩
           </button>
         </div>
       </div>
@@ -388,8 +412,13 @@ function Row({
               routed={column.source.id === routedSourceId}
               staged={column.source.id === stagedSource}
               legal={isLegal(column.source, destination)}
+              claimed={claimed}
               crosshair={rowHot || hoverColumn === columnIndex}
-              title={`${column.source.label} → ${destination.label}`}
+              title={
+                claimed
+                  ? `${destination.label} is claimed by ${holder} — release it to route`
+                  : `${column.source.label} → ${destination.label}`
+              }
               onClick={() => onRoute(destination.id, column.source.id)}
             />
           </div>

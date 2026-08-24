@@ -134,6 +134,19 @@ into one entry that steers toward adding it as a switcher.
   panel out there. Append; do not insert.
 - **Locks are per IP address**, not per connection, because that is what the
   Videohub spec does. Two panels on one machine share a lock. This surprises people.
+- **The UI word is "claim"; the wire word is "lock".** Same state, same
+  `locks` map, same `lock|unlock|force` actions on the API — only the browser
+  and the guide say claim, because a padlock reads as "nothing can change this"
+  while what it really is is somebody taking the row. Do not rename the API or
+  the protocol side to match.
+- **An owner routes through its own lock on the wire, and not over HTTP.** The
+  browser and the phone app are always the owner of what they just claimed —
+  same address — so the per-IP rule alone made the button refuse everyone but
+  the operator who pressed it, and it looked broken because it was.
+  `RouteOptions.ownLockHolds` is the split: `api.ts` passes it on every route,
+  take and salvo, the Videohub and ASCII bridges never do. Do not push that
+  check down into `fleet.route` unconditionally — that would break the spec for
+  panels.
 - **A refused route is `ACK` + unchanged status, not `NAK`.** `NAK` is for
   malformed or out-of-range requests. The spec is explicit that a client must
   believe the status update, not its own request.
@@ -182,9 +195,15 @@ into one entry that steers toward adding it as a switcher.
 
 ## 7. Status — be precise about it
 
-Verified against the **simulated fleet** and against a **real TCP client** driving
-the protocol. Never against an ATEM, and never against a Videohub hardware panel.
-Do not describe the routing calls or the availability gating as proven.
+Verified against the **simulated fleet**, against a **real TCP client** driving the
+protocol, and — since 2026-08-21 — against a **real ATEM Mini Extreme ISO**, which
+*corrected* the availability gating rather than confirming it (see `docs/NOTES.md`).
+That is the only switcher this has ever met.
+
+Still unproven, and not to be described otherwise: a **real Videohub control panel**
+driving it, a **real Videohub as a device**, either mobile app on a physical phone,
+and every model in the simulator's list except the Mini Extreme ISO — those are
+declared shapes, corrected by documentation and by testers, never by hardware.
 
 ## Notes
 

@@ -8,6 +8,7 @@ import { useFleet } from './useFleet';
 import { useIsMobile } from './useIsMobile';
 import { MobileRouter } from './components/MobileRouter';
 import { useTakeState, type UndoEntry } from './takeState';
+import { claimedReason } from './claims';
 import { useSimulatorFleet } from './simulator/useSimulatorFleet';
 import type { Destination } from './types';
 
@@ -23,7 +24,7 @@ export function App() {
   const api = useFleetImpl();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<'matrix' | 'devices' | 'sources'>('matrix');
-  const [staleNotice, setStaleNotice] = useState<string | null>(null);
+  const [flashNotice, setFlashNotice] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [builder, setBuilder] = useState<BuilderEntry[]>([]);
 
@@ -74,6 +75,12 @@ export function App() {
     }
   }, [isMobile, take]);
 
+  /** Say something for a few seconds and then stop saying it. */
+  const flash = (message: string): void => {
+    setFlashNotice(message);
+    window.setTimeout(() => setFlashNotice(null), 6000);
+  };
+
   /**
    * A crosspoint click. In live mode it goes now; in preset mode it joins the
    * take. Either way what it replaced is recorded, so undo has somewhere to
@@ -81,6 +88,14 @@ export function App() {
    */
   const onRoute = (destination: string, source: number): void => {
     if (!device) return;
+    // Before staging as well as before routing: a take of a claimed crosspoint
+    // is refused at the server, and finding that out at the take — with the
+    // rest of the take already gone through — is the worst moment to find it.
+    const refusal = claimedReason(device, destination, api.address);
+    if (refusal) {
+      flash(refusal);
+      return;
+    }
     if (take.mode === 'preset') {
       take.stage(device.id, destination, source);
       return;
@@ -126,10 +141,7 @@ export function App() {
     if (restore.length > 0) {
       await api.take(restore.map((entry) => ({ ...entry, source: entry.from })));
     }
-    if (stale.length > 0) {
-      setStaleNotice(`Left alone, changed since: ${stale.join(', ')}`);
-      window.setTimeout(() => setStaleNotice(null), 6000);
-    }
+    if (stale.length > 0) flash(`Left alone, changed since: ${stale.join(', ')}`);
   };
 
   const salvoMembers = useMemo(
@@ -264,9 +276,9 @@ export function App() {
       </header>
 
       {api.error ? <div className="error">{api.error}</div> : null}
-      {staleNotice ? (
-        <div className="notice" onClick={() => setStaleNotice(null)} role="status">
-          {staleNotice}
+      {flashNotice ? (
+        <div className="notice" onClick={() => setFlashNotice(null)} role="status">
+          {flashNotice}
         </div>
       ) : null}
       {api.notice ? (
@@ -291,6 +303,7 @@ export function App() {
             onTake={() => void onTake()}
             onClear={take.clear}
             onUndo={() => void onUndo()}
+            self={api.address}
           />
         ) : view === 'sources' ? (
           <SourcesPage
@@ -320,7 +333,8 @@ export function App() {
             staged={take.staged}
             onRoute={onRoute}
             onUnstage={(destination) => take.unstage(device.id, destination)}
-            onLock={(destination, action) => void api.lock(device.id, destination, action)}
+            onClaim={(destination, action) => void api.lock(device.id, destination, action)}
+            self={api.address}
             onRename={(destination, label) => void api.labelDestination(device.id, destination, label)}
             onAddToSalvo={building ? addToSalvo : null}
           />

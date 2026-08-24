@@ -24,7 +24,8 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Destination order = Videohub output numbers; source order = input numbers. Append, never insert.
 - Legality comes from the switcher's `sourceAvailability`/`meAvailability`, not model tables.
 - Locks are per IP, matching the Videohub spec. Refused route = ACK + unchanged status; NAK is for malformed.
-- Verified against `--mock` and a raw TCP client only — no ATEM hardware, no real panel, no real Videohub.
+- The UI calls a lock a **claim** and crosshatches the row. On the wire an owner routes through its own lock; over HTTP it may not (`ownLockHolds`), or a claim stops nobody.
+- Verified against `--mock`, a raw TCP client, and one real ATEM Mini Extreme ISO (which corrected the rules) — no real panel, no real Videohub, no other switcher model.
 - Devices are `RoutableDevice`: ATEM (real/mock/replayed capture) or Videohub. A Videohub owns its own locks.
 - `npm run capture -- <address>` takes a capture off hardware; `"capture": "<file>"` replays it as a device.
 - Ties make one destination follow another across boxes, one level deep.

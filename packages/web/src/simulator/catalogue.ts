@@ -78,6 +78,16 @@ const MINI_EXTREME_ISO = switcher({
   mediaPlayers: 2,
 });
 
+/**
+ * The Mini Pro and Mini Pro ISO do have a multiview — four inputs, preview,
+ * program and the stream/record status, ten windows — but the layout is fixed
+ * in hardware and no window takes a source. The demo used to offer all ten as
+ * crosspoints, which is worse than offering none: a routable-looking row that
+ * the hardware would ignore. The base ATEM Mini has no multiview output at all.
+ * Only the Extreme models route their windows, and that one is hardware-checked.
+ */
+const FIXED_MULTIVIEW = 'Its ten-window multiview is fixed in hardware — no window is routable.';
+
 export const CATALOGUE: CatalogueEntry[] = [
   // --- ATEM Mini -----------------------------------------------------------
   {
@@ -86,7 +96,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     family: 'ATEM Mini',
     kind: 'atem',
     provenance: 'declared',
-    profile: switcher({ product: 'ATEM Mini', inputs: 4, auxes: 0, mvWindows: 10 }),
+    profile: switcher({ product: 'ATEM Mini', inputs: 4, auxes: 0, multiviewers: 0, mvWindows: 0 }),
+    note: 'No multiview output at all, so no multiview windows are offered.',
   },
   {
     id: 'atem-mini-pro',
@@ -94,7 +105,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     family: 'ATEM Mini',
     kind: 'atem',
     provenance: 'declared',
-    profile: switcher({ product: 'ATEM Mini Pro', inputs: 4, auxes: 1, mvWindows: 10 }),
+    profile: switcher({ product: 'ATEM Mini Pro', inputs: 4, auxes: 1, mvWindows: 0 }),
+    note: FIXED_MULTIVIEW,
   },
   {
     id: 'atem-mini-pro-iso',
@@ -102,7 +114,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     family: 'ATEM Mini',
     kind: 'atem',
     provenance: 'declared',
-    profile: switcher({ product: 'ATEM Mini Pro ISO', inputs: 4, auxes: 1, mvWindows: 10 }),
+    profile: switcher({ product: 'ATEM Mini Pro ISO', inputs: 4, auxes: 1, mvWindows: 0 }),
+    note: FIXED_MULTIVIEW,
   },
   {
     id: 'atem-mini-extreme',
@@ -148,7 +161,15 @@ export const CATALOGUE: CatalogueEntry[] = [
     family: 'ATEM SDI',
     kind: 'atem',
     provenance: 'declared',
-    profile: switcher({ product: 'ATEM SDI', inputs: 4, auxes: 0, inputPorts: sdiOnly }),
+    profile: switcher({
+      product: 'ATEM SDI',
+      inputs: 4,
+      auxes: 0,
+      multiviewers: 0,
+      mvWindows: 0,
+      inputPorts: sdiOnly,
+    }),
+    note: 'The SDI twin of the ATEM Mini, multiview included: it has none.',
   },
   {
     id: 'atem-sdi-pro-iso',
@@ -156,7 +177,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     family: 'ATEM SDI',
     kind: 'atem',
     provenance: 'declared',
-    profile: switcher({ product: 'ATEM SDI Pro ISO', inputs: 4, auxes: 1, inputPorts: sdiOnly }),
+    profile: switcher({ product: 'ATEM SDI Pro ISO', inputs: 4, auxes: 1, mvWindows: 0, inputPorts: sdiOnly }),
+    note: `${FIXED_MULTIVIEW} Taken from its Mini Pro ISO twin.`,
   },
   {
     id: 'atem-sdi-extreme-iso',
