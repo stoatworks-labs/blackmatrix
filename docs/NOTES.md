@@ -121,6 +121,25 @@ Facts that cost time to establish:
   `documents.blackmagicdesign.com/DeveloperManuals/VideohubDeveloperInformation.pdf`
   — a PDF, so `pdftotext -layout` it; WebFetch alone returns binary.
 
+## Pushing a tag is NOT enough — create the release too (2026-08-24)
+
+`release-desktop.yml` never creates the GitHub release. Every job builds its
+installers, then polls `gh release view "$TAG"` for **30 tries at 10s** and runs
+`gh release upload`. With no release there to find, each job fails at *Attach
+installers to the release* five minutes later, with `release not found` buried in
+the log and a green-looking "build" phase above it.
+
+v0.2.2 lost macOS x86_64, macOS aarch64 and Windows that way — the three that
+finished before I created the release by hand. Linux was still building, found the
+release when it got there, and passed. `gh run rerun <id> --failed` is refused
+while any job is still in flight (`This workflow is already running`), so the
+recovery is: create the release, wait for the stragglers, then rerun the failures.
+
+So the order is **create the release, then push the tag** — or create it within
+five minutes. Worth fixing in the workflow with a `gh release create
+--generate-notes --verify-tag` step, or a `create-release` job the matrix depends
+on; until that exists this is a step, not an optional nicety.
+
 ## Renamed to BlackMatrix (2026-08-21)
 
 Repos, dirs, packages (`@blackmatrix/server`, `@blackmatrix/web`; `@av/videohub` and
