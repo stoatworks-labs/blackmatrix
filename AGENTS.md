@@ -185,3 +185,10 @@ into one entry that steers toward adding it as a switcher.
 Verified against the **simulated fleet** and against a **real TCP client** driving
 the protocol. Never against an ATEM, and never against a Videohub hardware panel.
 Do not describe the routing calls or the availability gating as proven.
+
+## Notes
+
+`docs/NOTES.md` carries this repo's working notes — current status, decisions
+already made, and the traps that have actually bitten. Read it before changing
+anything non-obvious. Cross-cutting fleet knowledge lives in
+[fleet-notes](https://github.com/stoatworks-labs/fleet-notes).
