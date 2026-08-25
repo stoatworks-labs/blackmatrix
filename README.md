@@ -70,8 +70,8 @@ npm run build && npm start
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Apple Silicon · .dmg disk image | [`BlackMatrix_0.2.2_aarch64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/BlackMatrix_0.2.2_aarch64.dmg) | 46 MB |
-| Intel · .dmg disk image | [`BlackMatrix_0.2.2_x64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/BlackMatrix_0.2.2_x64.dmg) | 48 MB |
+| Apple Silicon · .dmg disk image | [`BlackMatrix_0.2.2_aarch64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/BlackMatrix_0.2.2_aarch64.dmg) | 51 MB |
+| Intel · .dmg disk image | [`BlackMatrix_0.2.2_x64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/BlackMatrix_0.2.2_x64.dmg) | 54 MB |
 | Apple Silicon · .pkg installer | [`blackmatrix-0.2.2-macos-aarch64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/blackmatrix-0.2.2-macos-aarch64.pkg) | 47 MB |
 | Intel · .pkg installer | [`blackmatrix-0.2.2-macos-x86_64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.2.2/blackmatrix-0.2.2-macos-x86_64.pkg) | 49 MB |
 
