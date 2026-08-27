@@ -205,6 +205,12 @@ driving it, a **real Videohub as a device**, either mobile app on a physical pho
 and every model in the simulator's list except the Mini Extreme ISO — those are
 declared shapes, corrected by documentation and by testers, never by hardware.
 
+The probe that met that switcher covered the **multiview windows only** — 80 tests
+across all 16. `--probe-aux` is opt-in and has not been run, so the aux-only bits
+(`Auxiliary1`/`Auxiliary2`/`WebcamOut`) were read off the masks and the aux-kind
+source IDs and never settled against what the aux outputs actually did. Say the
+multiview routing is hardware-verified; do not say it of the aux buses.
+
 ## Notes
 
 `docs/NOTES.md` carries this repo's working notes — current status, decisions
