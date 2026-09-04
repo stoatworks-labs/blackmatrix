@@ -1,6 +1,6 @@
 {
   "name": "blackmatrix",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "description": "Crosspoint router matrix for a fleet of Blackmagic ATEM switchers, with Videohub protocol emulation",
   "license": "MIT",

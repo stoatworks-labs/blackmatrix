@@ -1,6 +1,6 @@
 {
   "name": "@av/atem-lang",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Command languages for an ATEM fleet: a typed grammar, state paths, raw command codes, JSON and OSC, over a catalogue generated from atem-connection's own types",
