@@ -135,10 +135,18 @@ release when it got there, and passed. `gh run rerun <id> --failed` is refused
 while any job is still in flight (`This workflow is already running`), so the
 recovery is: create the release, wait for the stragglers, then rerun the failures.
 
-So the order is **create the release, then push the tag** — or create it within
-five minutes. Worth fixing in the workflow with a `gh release create
---generate-notes --verify-tag` step, or a `create-release` job the matrix depends
-on; until that exists this is a step, not an optional nicety.
+**Fixed 2026-09-05.** The poll is gone: the *Attach installers* step now runs
+`gh release view || gh release create --verify-tag --generate-notes` before
+uploading, so whichever job gets there first creates the release and the rest
+upload into it. `--verify-tag` refuses to invent a tag that was never pushed,
+and the trailing `|| true` makes losing the race harmless. A tag on its own is
+now enough again.
+
+It recurred on 2026-09-04 across a 48-tag sweep: livepremier-plus and
+atem-fleet-admin both lost the five-minute window while their creating job sat
+queued, and needed the release made by hand and the failed jobs rerun. The same
+fix went into all five repos that shared this shape — RFutils (two workflows),
+livepremier-plus, atem-fleet-admin, atem-overseer and this one.
 
 ## Renamed to BlackMatrix (2026-08-21)
 
