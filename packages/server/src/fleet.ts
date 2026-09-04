@@ -388,6 +388,23 @@ export class Fleet extends EventEmitter {
     return configured.some((address) => normalizeAddress(address.trim()) === client);
   }
 
+  /**
+   * Every device, with the runner itself.
+   *
+   * For callers that work in switchers rather than in crosspoints — the
+   * command language is the only one so far. `snapshot()` stays the shape the
+   * UI and the API use; this is deliberately not that, because handing a
+   * matrix to something that wants to run a macro would be the wrong shape
+   * twice.
+   */
+  listRunners(): Array<{ id: string; name: string; runner: RoutableDevice }> {
+    return [...this.entries.values()].map((entry) => ({
+      id: entry.runner.id,
+      name: entry.runner.name,
+      runner: entry.runner,
+    }));
+  }
+
   getEntry(deviceId: string): DeviceEntry | undefined {
     return this.entries.get(deviceId);
   }

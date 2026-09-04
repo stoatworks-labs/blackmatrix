@@ -4,6 +4,7 @@ import { applyEnvironmentOverrides, loadConfig, saveConfig, MOCK_CONFIG, type Ap
 import { Fleet } from './fleet.js';
 import { FailoverController } from './failover.js';
 import { AsciiFleetBackend } from './ascii/asciiBackend.js';
+import { FleetLanguage } from './lang/fleetLanguage.js';
 import { startMockRouter } from './videohub/mockRouter.js';
 import { createApp } from './api.js';
 import { attachWebsocket } from './ws.js';
@@ -23,12 +24,30 @@ fleet.setFailoverView(() => failover.view());
 failover.on('change', () => fleet.emit('change'));
 failover.on('configChanged', () => fleet.emit('configChanged'));
 
+/*
+ * The command language, offered to the line protocol as its fallback.
+ *
+ * The routing verbs are parsed first and are untouched, so every existing
+ * integration behaves exactly as it did. Only a line whose first word means
+ * nothing to them reaches the language — which is precisely the set of lines
+ * that used to be answered `ERR unknown command`.
+ */
+const language = new FleetLanguage(fleet);
+
 const ascii = config.ascii?.enabled
   ? new AsciiMatrixServer({
       backend: new AsciiFleetBackend(fleet, failover),
       port: config.ascii.port,
       host: config.ascii.host,
       udp: true,
+      ...(config.ascii.language !== false
+        ? {
+            language: async (line, context) =>
+              (await language.runLine(line, { device: context.deviceId, client: context.client }))
+                .replies,
+            languageOverUdp: config.ascii.languageOverUdp === true,
+          }
+        : {}),
       log: (message) => log.info(message),
     })
   : null;
@@ -103,7 +122,15 @@ async function main(): Promise<void> {
       const where = device.videohubPort ? `videohub on :${device.videohubPort}` : 'videohub off';
       log.info(`  ${device.id} — ${device.name} (${device.connection}), ${where}`);
     }
-    if (ascii) log.info(`  line protocol on :${ascii.port} (tcp and udp)`);
+    if (ascii) {
+      const withLanguage = config.ascii?.language !== false;
+      log.info(
+        `  line protocol on :${ascii.port} (tcp and udp)` +
+          (withLanguage
+            ? `, command language on tcp${config.ascii?.languageOverUdp ? ' and udp' : ''}`
+            : ''),
+      );
+    }
     for (const watch of failover.view()) {
       log.info(`  failover "${watch.name}" — ${watch.armed ? 'armed' : 'disarmed'}, ${watch.probe.kind} probe`);
     }

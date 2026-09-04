@@ -18,8 +18,45 @@ export interface AsciiMatrixServerOptions {
    * anything is said back.
    */
   udp?: boolean;
+  /**
+   * Where a line the routing verbs do not recognise goes next.
+   *
+   * The protocol above is deliberately small and deliberately ATEM-free: it is
+   * what someone types into a disguise Telnet Matrix box, and it must stay
+   * documentable in ten lines. A fuller command language does not belong in
+   * this package, so the host supplies one and this calls it as a fallback.
+   *
+   * Returning `null` means "not mine", and the ordinary `ERR unknown command`
+   * follows. Only lines whose *first word* is unrecognised ever reach here, so
+   * a malformed `ROUTE` still gets its own message rather than being offered
+   * to a language that will complain about something else.
+   */
+  language?: AsciiLanguageHook;
+  /**
+   * Whether datagrams may use the language. Off by default, and the default
+   * is the point.
+   *
+   * The routing verbs are safe to accept from an unauthenticated datagram:
+   * the worst a forged one does is move a crosspoint, which is what this port
+   * is for. A full command language is a different risk class — it can cut a
+   * programme, stop a recording or end a stream — and UDP has no handshake, no
+   * connection and no return path worth trusting. A show controller that needs
+   * those over UDP can say so; nobody should get them by default.
+   */
+  languageOverUdp?: boolean;
   log?: (message: string) => void;
 }
+
+/** How a host offers a fuller command language to this protocol. */
+export type AsciiLanguageHook = (
+  line: string,
+  context: {
+    client: string;
+    /** The device this connection is pointed at, or null on a datagram. */
+    deviceId: string | null;
+    transport: 'tcp' | 'udp';
+  },
+) => Promise<string[] | null> | string[] | null;
 
 interface Connection {
   socket: net.Socket;
@@ -45,6 +82,8 @@ export class AsciiMatrixServer {
   private readonly backend: AsciiMatrixBackend;
   private readonly base: number;
   private readonly wantUdp: boolean;
+  private readonly language: AsciiLanguageHook | null;
+  private readonly languageOverUdp: boolean;
   private readonly log: (message: string) => void;
   private server: net.Server | null = null;
   private udp: dgram.Socket | null = null;
@@ -56,6 +95,8 @@ export class AsciiMatrixServer {
     this.host = options.host ?? '0.0.0.0';
     this.base = options.wireBase ?? 1;
     this.wantUdp = options.udp ?? false;
+    this.language = options.language ?? null;
+    this.languageOverUdp = options.languageOverUdp ?? false;
     this.log = options.log ?? (() => {});
   }
 
@@ -168,12 +209,31 @@ export class AsciiMatrixServer {
     if (!command) return [];
 
     switch (command.kind) {
-      case 'error':
+      case 'error': {
+        /* Only an unrecognised first word falls through. A `ROUTE` with the
+           wrong arguments keeps its own message, which is the useful one. */
+        if (this.language && command.reason.startsWith('unknown command:')) {
+          const transport = connection ? 'tcp' : 'udp';
+          if (transport === 'udp' && !this.languageOverUdp) {
+            return ['ERR that command needs a TCP connection on this port'];
+          }
+          /* Trimmed: this protocol accepts CRLF, and `parseLine` strips it
+             internally, so without this a telnet client's carriage return
+             reaches the language — and comes back out in its echoed replies
+             and in the log. */
+          const replies = await this.language(line.trim(), {
+            client: address,
+            deviceId: connection?.deviceId ?? null,
+            transport,
+          });
+          if (replies) return replies;
+        }
         return [`ERR ${command.reason}`];
+      }
       case 'ping':
         return ['PONG'];
       case 'help':
-        return helpText(this.backend, this.base);
+        return helpText(this.backend, this.base, this.language !== null);
       case 'list':
         return this.listReply();
       case 'device': {

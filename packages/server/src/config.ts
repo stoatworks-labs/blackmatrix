@@ -158,6 +158,22 @@ export interface AppConfig {
     host: string;
     /** As `videohub.failoverClients`, for this protocol. */
     failoverClients?: string[];
+    /**
+     * Accept the full command language on this port, not only the routing
+     * verbs. On by default: the routing verbs are unchanged and still take
+     * priority, so an existing disguise or PIXERA configuration behaves
+     * exactly as before and anything it would have been told was an unknown
+     * command now gets a chance to mean something.
+     */
+    language?: boolean;
+    /**
+     * Accept the language from datagrams too. Off by default, and deliberately.
+     *
+     * Moving a crosspoint from a forged datagram is what this port is for.
+     * Cutting a programme or stopping a recording from one is a different risk
+     * class, and UDP offers no handshake and no return path worth trusting.
+     */
+    languageOverUdp?: boolean;
   };
   devices: DeviceConfig[];
   /** Per device, destination id -> operator's own name for it. */
@@ -176,7 +192,7 @@ const DEFAULTS: AppConfig = {
   videohub: { enabled: true, basePort: 9990, host: '0.0.0.0' },
   // Off until asked for: a second control protocol listening on every interface
   // is not something to acquire by upgrading.
-  ascii: { enabled: false, port: 9995, host: '0.0.0.0' },
+  ascii: { enabled: false, port: 9995, host: '0.0.0.0', language: true, languageOverUdp: false },
   devices: [],
   labels: {},
   salvos: [],
@@ -189,7 +205,7 @@ export const MOCK_CONFIG: AppConfig = {
   ...DEFAULTS,
   // The line protocol is on in the mock so it gets exercised without anyone
   // having to turn it on — `telnet localhost 9995` and type at it.
-  ascii: { enabled: true, port: 9995, host: '127.0.0.1' },
+  ascii: { enabled: true, port: 9995, host: '127.0.0.1', language: true, languageOverUdp: false },
   devices: [
     { id: 'stage', name: 'Stage', address: 'mock://stage' },
     { id: 'studio', name: 'Studio', address: 'mock://studio' },

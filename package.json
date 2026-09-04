@@ -6,13 +6,14 @@
   "license": "MIT",
   "workspaces": [
     "packages/videohub",
+    "packages/lang",
     "packages/ascii",
     "packages/matrix",
     "packages/server",
     "packages/web"
   ],
   "scripts": {
-    "build:libs": "npm run build --workspace @av/videohub && npm run build --workspace @av/ascii-matrix && npm run build --workspace @av/atem-matrix",
+    "build:libs": "npm run build --workspace @av/videohub && npm run build --workspace @av/ascii-matrix && npm run build --workspace @av/atem-matrix && npm run build --workspace @av/atem-lang",
     "dev": "npm run build:libs && npm run dev --workspace @blackmatrix/server",
     "dev:mock": "npm run build:libs && npm run dev:mock --workspace @blackmatrix/server",
     "dev:replay": "npm run build:libs && npm run dev --workspace @blackmatrix/server",

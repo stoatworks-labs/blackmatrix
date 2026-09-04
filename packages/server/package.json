@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@av/ascii-matrix": "*",
+    "@av/atem-lang": "*",
     "@av/atem-matrix": "*",
     "@av/videohub": "*",
     "atem-connection": "^3.9.0",

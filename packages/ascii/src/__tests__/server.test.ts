@@ -1,4 +1,5 @@
 import net from 'node:net';
+import dgram from 'node:dgram';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AsciiMatrixServer } from '../server.js';
 import type { AsciiMatrixBackend } from '../types.js';
@@ -205,5 +206,103 @@ describe('AsciiMatrixServer', () => {
     expect(await client.next()).toContain('ERR unknown command');
     client.send('PING');
     expect(await client.next()).toBe('PONG');
+  });
+});
+
+/*
+ * The language fallback.
+ *
+ * The rule that matters is that it changes nothing about the routing verbs.
+ * Existing disguise and PIXERA configurations are typed into a box by hand and
+ * cannot be re-tested when this package is upgraded, so "unchanged" has to be
+ * asserted rather than assumed.
+ */
+describe('the command language fallback', () => {
+  let fleet: FakeFleet;
+  let server: AsciiMatrixServer;
+  let client: Client;
+  let seen: string[];
+
+  async function open(options: { languageOverUdp?: boolean; decline?: boolean } = {}) {
+    fleet = new FakeFleet();
+    seen = [];
+    server = new AsciiMatrixServer({
+      backend: fleet,
+      port: 0,
+      host: '127.0.0.1',
+      udp: true,
+      languageOverUdp: options.languageOverUdp ?? false,
+      language: (line) => {
+        seen.push(line);
+        return options.decline ? null : [`OK saw ${line}`];
+      },
+    });
+    await server.start();
+    client = await connect(server.port);
+    expect(await client.next()).toContain('numbers start at 1');
+  }
+
+  afterEach(async () => {
+    client?.close();
+    await server?.stop();
+  });
+
+  it('never sees a line the routing verbs understand', async () => {
+    await open();
+    client.send('ROUTE 2 3');
+    expect(await client.next()).toBe('OK ROUTE 2 3');
+    client.send('PING');
+    expect(await client.next()).toBe('PONG');
+    client.send('1*3!');
+    expect(await client.next()).toBe('Out3 In1 All');
+    expect(seen).toEqual([]);
+  });
+
+  /* A malformed ROUTE keeps its own message: the language would complain about
+     something else entirely, and the operator needs the one about ROUTE. */
+  it("keeps a known verb's own error rather than offering it to the language", async () => {
+    await open();
+    client.send('ROUTE x y');
+    expect(await client.next()).toBe('ERR ROUTE wants numbers');
+    expect(seen).toEqual([]);
+  });
+
+  it('hands an unrecognised first word over', async () => {
+    await open();
+    client.send('Cut ME 1');
+    expect(await client.next()).toBe('OK saw Cut ME 1');
+    expect(seen).toEqual(['Cut ME 1']);
+  });
+
+  it('falls back to the ordinary error when the language declines', async () => {
+    await open({ decline: true });
+    client.send('Cut ME 1');
+    expect(await client.next()).toBe('ERR unknown command: Cut');
+  });
+
+  /* Moving a crosspoint from a forged datagram is what this port is for.
+     Cutting a programme from one is not. */
+  it('refuses the language on a datagram unless it is turned on', async () => {
+    await open();
+    const socket = dgram.createSocket('udp4');
+    try {
+      socket.send('Cut ME 1\n', server.port, '127.0.0.1');
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(seen).toEqual([]);
+    } finally {
+      socket.close();
+    }
+  });
+
+  it('lets a datagram through when it is', async () => {
+    await open({ languageOverUdp: true });
+    const socket = dgram.createSocket('udp4');
+    try {
+      socket.send('Cut ME 1\n', server.port, '127.0.0.1');
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(seen).toEqual(['Cut ME 1']);
+    } finally {
+      socket.close();
+    }
   });
 });

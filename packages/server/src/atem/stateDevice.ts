@@ -41,6 +41,15 @@ export class StateDevice extends EventEmitter implements DeviceRunner, AtemRoute
     return this.atemState.info.productIdentifier ?? this.product;
   }
 
+  /**
+   * Null, always. This device simulates the crosspoints and nothing else, and
+   * a simulated switcher that accepted `startRecording` and did nothing would
+   * be worse than one that says it cannot.
+   */
+  get full(): null {
+    return null;
+  }
+
   get commands(): AtemRouterCommands | null {
     return this.status === 'connected' ? this : null;
   }

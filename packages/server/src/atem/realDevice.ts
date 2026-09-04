@@ -51,6 +51,10 @@ export class RealDevice extends EventEmitter implements DeviceRunner {
     return this.status === 'connected' ? this.atem : null;
   }
 
+  get full(): Atem | null {
+    return this.status === 'connected' ? this.atem : null;
+  }
+
   async connect(): Promise<void> {
     this.status = 'connecting';
     this.emit('connection', this.status);

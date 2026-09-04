@@ -1,4 +1,8 @@
-export { AsciiMatrixServer, type AsciiMatrixServerOptions } from './server.js';
+export {
+  AsciiMatrixServer,
+  type AsciiLanguageHook,
+  type AsciiMatrixServerOptions,
+} from './server.js';
 export {
   helpText,
   parseLine,

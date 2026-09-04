@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { AtemState } from 'atem-connection';
+import type { Atem, AtemState } from 'atem-connection';
 import { applyRoute, buildMatrix, type AtemRouterCommands, type Destination, type MatrixModel } from '@av/atem-matrix';
 import type { LockAction } from '@av/videohub';
 
@@ -18,6 +18,18 @@ export interface DeviceRunner extends EventEmitter {
   /** The switcher's own product string once known, else the configured name. */
   readonly model: string;
   readonly commands: AtemRouterCommands | null;
+  /**
+   * The switcher's whole command surface, for the command language.
+   *
+   * `commands` above is the routing slice and is satisfied by the simulated
+   * devices, which is what makes the grid testable with no hardware. This is
+   * the real thing, and it is deliberately null on anything simulated: a mock
+   * switcher can pretend to route because this app knows what routing means,
+   * and cannot pretend to run a macro or start a recording. Offering a
+   * simulated `startRecording` that quietly did nothing would make the mock
+   * lie, and the mock's whole value is that it does not.
+   */
+  readonly full: Atem | null;
 
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -63,6 +75,16 @@ export interface RoutableDevice extends EventEmitter {
   locks?(): Record<string, string | null>;
   setLock?(destination: Destination, action: LockAction): Promise<void>;
 
+  /**
+   * The full ATEM command surface, when this device has one.
+   *
+   * Absent on a Videohub, which has crosspoints and nothing else any of this
+   * could mean, and null on a simulated ATEM. Callers say why rather than
+   * failing generically — "that is a Videohub" and "that is a mock" are
+   * different problems with different answers.
+   */
+  full?(): Atem | null;
+
   connect(): Promise<void>;
   disconnect(): Promise<void>;
 }
@@ -94,6 +116,10 @@ export class AtemRoutable extends EventEmitter implements RoutableDevice {
   buildMatrix(): MatrixModel | null {
     const state = this.runner.state;
     return state ? buildMatrix(state) : null;
+  }
+
+  full(): Atem | null {
+    return this.runner.full;
   }
 
   async route(destination: Destination, source: number): Promise<void> {

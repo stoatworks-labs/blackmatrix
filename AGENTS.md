@@ -30,6 +30,7 @@ packages/
   videohub   @av/videohub      protocol + TCP server AND client, zero ATEM knowledge
   ascii      @av/ascii-matrix  plain-text line protocol over TCP/UDP, zero ATEM knowledge
   matrix     @av/atem-matrix   AtemState -> destinations/sources/legality/routing calls, zero I/O
+  lang       @av/atem-lang     five command languages over a generated ATEM catalogue, zero I/O
   server     @blackmatrix/server
   web        @blackmatrix/web
 ```

@@ -185,7 +185,11 @@ export function resolveSalvo(reference: string, salvos: Array<{ id: string; name
   return byName ? byName.id : null;
 }
 
-export function helpText(backend: AsciiMatrixBackend, base: number): string[] {
+export function helpText(
+  backend: AsciiMatrixBackend,
+  base: number,
+  language = false,
+): string[] {
   const devices = backend.listDevices();
   return [
     `# BlackMatrix line protocol. Numbers start at ${base}.`,
@@ -201,5 +205,12 @@ export function helpText(backend: AsciiMatrixBackend, base: number): string[] {
     '# LIST                              devices, salvos and failover watches',
     '# PING                              answers PONG',
     `# devices: ${devices.map((device) => device.id).join(', ') || 'none'}`,
+    ...(language
+      ? [
+          '# Anything else is read as a BlackMatrix command language line —',
+          '#   the grammar, a state path, a wire code, JSON or OSC.',
+          '#   "BM Help" lists it. (Plain HELP is this protocol\'s own, above.)',
+        ]
+      : []),
   ];
 }
