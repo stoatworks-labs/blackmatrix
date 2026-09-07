@@ -9,12 +9,15 @@
 # Plain `build` produces the web app and the server for the real product, which
 # is not what this Worker serves.
 #
-# Second, this Worker has NO custom domain — it is not in the account's
-# workers/domains list and no [[routes]] block declares one, so there is nowhere
-# to check that a deploy became visible. Every other repo in the fleet ends with
-# a live-site check; this one cannot, and saying so is better than pretending.
-# If it should be reachable, add a [[routes]] block with custom_domain = true and
-# put the check back.
+# Second, what is published is the SIMULATOR, never the product. A browser cannot
+# open the UDP the ATEM protocol needs or the raw TCP the Videohub protocol needs,
+# so a hosted BlackMatrix could not drive a switcher however it was built — the
+# page says so in a banner. The hostname carries the -demo suffix for that reason,
+# as atem-overseer-demo and caspar-av-demo do.
+#
+# That hostname was added on 2026-09-07. Until then this Worker had no domain at
+# all and this workflow ended with a warning instead of a check, because there was
+# no URL at which a deploy could be observed.
 #
 # Deliberately the same shape as the rest of the fleet's deploy.yml, so a fix to
 # one is obvious in the others. See negative-space for the original.
@@ -95,12 +98,31 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
         run: npx --yes wrangler@4.116.0 deploy
 
-      # No live-site check: this Worker has no custom domain, so there is no URL
-      # at which a deploy could be observed. Every other repo in the fleet ends
-      # with one. Declare a [[routes]] block with custom_domain = true and the
-      # check can go back in.
-      - name: Note that this deploy cannot be verified
+      # Prove it actually landed, against the domain a visitor uses. The whole body
+      # cannot be compared: Cloudflare injects a bot-management script before
+      # </body> carrying a per-request nonce, so no two responses are identical.
+      #
+      # -F on the grep is load-bearing. Without it the $ signs are read as
+      # end-of-line anchors, the pattern matches nothing, and the filter silently
+      # does nothing.
+      - name: Check the live site is serving this build
         run: |
-          echo "::warning::blackmatrix has no custom domain, so this workflow can"
-          echo "::warning::confirm the upload succeeded but not that anything became"
-          echo "::warning::visible. Add a [[routes]] block to wrangler.toml to fix."
+          set -euo pipefail
+          want=$(sed -n '1,/<\/head>/p' packages/web/dist-sim/index.html \
+                 | grep -vF '__CF$cv$params' | shasum -a 256 | cut -d' ' -f1)
+          echo "expecting the live <head> to hash to $want"
+          for attempt in 1 2 3 4 5; do
+            got=$(curl -sS --max-time 30 "https://blackmatrix-demo.stoatworks-labs.com/" \
+                  | sed -n '1,/<\/head>/p' | grep -vF '__CF$cv$params' \
+                  | shasum -a 256 | cut -d' ' -f1 || true)
+            if [ "$got" = "$want" ]; then
+              echo "live site is serving this build (attempt $attempt)"
+              exit 0
+            fi
+            echo "not there yet, got $got — retrying in 10s (attempt $attempt)"
+            sleep 10
+          done
+          echo "::error::Deployed, but https://blackmatrix-demo.stoatworks-labs.com/ is"
+          echo "::error::still not serving this build's <head>. The upload succeeded, so"
+          echo "::error::this is the edge serving something else — check the Worker's routes."
+          exit 1

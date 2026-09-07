@@ -14,3 +14,18 @@ compatibility_date = "2026-08-21"
 directory = "./packages/web/dist-sim"
 # Deep links and reloads land on the app rather than a 404.
 not_found_handling = "single-page-application"
+
+# The public hostname for the demo, declared here rather than clicked into the
+# dashboard, so it is reproducible from the repo and cannot drift from what is
+# actually serving. `custom_domain = true` makes wrangler create the DNS record
+# and the Worker custom domain on deploy.
+#
+# Added 2026-09-07. Until then this Worker had no hostname at all: it was the
+# only simulator build in the fleet without one, so it deployed on every push and
+# was reachable nowhere. The -demo suffix follows atem-overseer-demo,
+# caspar-av-demo, srt-router-demo and the rest — what is published here is the
+# in-browser simulator, never the product, because a web page cannot open the UDP
+# the ATEM protocol needs or the raw TCP the Videohub protocol needs.
+[[routes]]
+pattern = "blackmatrix-demo.stoatworks-labs.com"
+custom_domain = true

@@ -24,6 +24,13 @@ state machine decided it had — the crosspoints move because a salvo was taken,
 because a video was edited. Two of the switcher's cameras are renamed to stand in for
 the media servers; that is the only staging.*
 
+**Click around it yourself: <https://blackmatrix-demo.stoatworks-labs.com>** — the
+real matrix in your browser, driving a simulated fleet you build from the device
+library. Every device there is invented in the tab: nothing is on a network and
+nothing is being controlled, because **a web page cannot reach a switcher at all**
+— the ATEM protocol is UDP and the Videohub protocol is raw TCP, and a browser can
+open neither. To route real hardware, run the app on the show network.
+
 An ATEM has no single "router", so this treats every bus that takes one source at
 a time as a destination, grouped into sections:
 
