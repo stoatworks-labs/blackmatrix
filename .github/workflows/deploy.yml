@@ -1,0 +1,106 @@
+# Build the site and put it in front of visitors.
+#
+# Until this existed, blackmatrix shipped only when somebody remembered to run
+# `cf-run npx wrangler deploy` from a laptop.
+#
+# Two things are unusual here.
+#
+# First, the site is the SIMULATOR build: `sim:build` -> packages/web/dist-sim.
+# Plain `build` produces the web app and the server for the real product, which
+# is not what this Worker serves.
+#
+# Second, this Worker has NO custom domain — it is not in the account's
+# workers/domains list and no [[routes]] block declares one, so there is nowhere
+# to check that a deploy became visible. Every other repo in the fleet ends with
+# a live-site check; this one cannot, and saying so is better than pretending.
+# If it should be reachable, add a [[routes]] block with custom_domain = true and
+# put the check back.
+#
+# Deliberately the same shape as the rest of the fleet's deploy.yml, so a fix to
+# one is obvious in the others. See negative-space for the original.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".github/dependabot.yml"
+  workflow_dispatch:
+
+# Newest push wins. Cancelling an in-flight build is safe: wrangler uploads the
+# assets first and activates the version as one step at the end, so a run killed
+# part way through never becomes the live version.
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      # Fail in a second rather than after a build. A deploy that cannot
+      # authenticate is the whole point of this job failing to happen.
+      - name: Check the Cloudflare token is present
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not set on this repository, so the"
+            echo "::error::site cannot be deployed. Create a Cloudflare API token with"
+            echo "::error::the 'Edit Cloudflare Workers' template scoped to this account,"
+            echo "::error::then:"
+            echo "::error::  gh secret set CLOUDFLARE_API_TOKEN --repo stoatworks-labs/blackmatrix"
+            echo "::error::cf-run already uses such a token from the login keychain under"
+            echo "::error::the service name 'stoatworks-cloudflare'; the same one works here."
+            exit 1
+          fi
+          echo "token present - ok"
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run sim:build
+
+      # A React major mismatch builds green and renders an empty page (RFutils #22,
+      # three weeks of it). Unit tests run in node and cannot see that; this loads
+      # the built site in a real browser.
+      - name: Smoke-check the site
+        uses: stoatworks-labs/smoke-check@v1
+        with:
+          dir: packages/web/dist-sim
+
+      # wrangler is pinned rather than left to resolve to latest, and Dependabot's
+      # github-actions ecosystem only bumps `uses:` refs, never a version inside a
+      # `run:` — so bump this deliberately, in step with the rest of the fleet.
+      - name: Deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        run: npx --yes wrangler@4.116.0 deploy
+
+      # No live-site check: this Worker has no custom domain, so there is no URL
+      # at which a deploy could be observed. Every other repo in the fleet ends
+      # with one. Declare a [[routes]] block with custom_domain = true and the
+      # check can go back in.
+      - name: Note that this deploy cannot be verified
+        run: |
+          echo "::warning::blackmatrix has no custom domain, so this workflow can"
+          echo "::warning::confirm the upload succeeded but not that anything became"
+          echo "::warning::visible. Add a [[routes]] block to wrangler.toml to fix."
