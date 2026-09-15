@@ -3,6 +3,10 @@
 BlackMatrix is **a crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
 across the top, destinations down the side, one click to route.
 
+![The routing grid on the built-in mock fleet, with every source group expanded.](screenshots/routing-grid.png)
+
+*The routing grid on the built-in mock fleet, with every source group expanded. The switcher state is simulated; the hatched cells are the real availability masks refusing a route the hardware would not allow.*
+
 It also **pretends to be a Blackmagic Videohub**, so hardware router panels, Companion and
 Blackmagic's own software can drive the same crosspoints — and, for a redundant rig, so a **media
 server can switch to its backup machine through it**.
