@@ -70,17 +70,17 @@ npm run build && npm start
 
 ## Download
 
-**[v0.3.0](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.3.0)** — prebuilt for macOS, Windows and Linux. Pick your platform:
+**[v0.3.1](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.3.1)** — prebuilt for macOS, Windows and Linux. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Apple Silicon, Intel</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Apple Silicon · .dmg disk image | [`BlackMatrix_0.3.0_aarch64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/BlackMatrix_0.3.0_aarch64.dmg) | 51 MB |
-| Intel · .dmg disk image | [`BlackMatrix_0.3.0_x64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/BlackMatrix_0.3.0_x64.dmg) | 54 MB |
-| Apple Silicon · .pkg installer | [`blackmatrix-0.3.0-macos-aarch64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/blackmatrix-0.3.0-macos-aarch64.pkg) | 47 MB |
-| Intel · .pkg installer | [`blackmatrix-0.3.0-macos-x86_64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/blackmatrix-0.3.0-macos-x86_64.pkg) | 49 MB |
+| Apple Silicon · .dmg disk image | [`BlackMatrix_0.3.1_aarch64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/BlackMatrix_0.3.1_aarch64.dmg) | 52 MB |
+| Intel · .dmg disk image | [`BlackMatrix_0.3.1_x64.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/BlackMatrix_0.3.1_x64.dmg) | 55 MB |
+| Apple Silicon · .pkg installer | [`blackmatrix-0.3.1-macos-aarch64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/blackmatrix-0.3.1-macos-aarch64.pkg) | 47 MB |
+| Intel · .pkg installer | [`blackmatrix-0.3.1-macos-x86_64.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/blackmatrix-0.3.1-macos-x86_64.pkg) | 49 MB |
 
 </details>
 
@@ -89,7 +89,7 @@ npm run build && npm start
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`BlackMatrix_0.3.0_x64-setup.exe`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/BlackMatrix_0.3.0_x64-setup.exe) | 29 MB |
+| x64 · .exe installer | [`BlackMatrix_0.3.1_x64-setup.exe`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/BlackMatrix_0.3.1_x64-setup.exe) | 30 MB |
 
 </details>
 
@@ -98,8 +98,8 @@ npm run build && npm start
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .deb package (Debian/Ubuntu) | [`BlackMatrix_0.3.0_amd64.deb`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/BlackMatrix_0.3.0_amd64.deb) | 56 MB |
-| x64 · .rpm package (Fedora/RHEL) | [`BlackMatrix-0.3.0-1.x86_64.rpm`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.0/BlackMatrix-0.3.0-1.x86_64.rpm) | 57 MB |
+| x64 · .deb package (Debian/Ubuntu) | [`BlackMatrix_0.3.1_amd64.deb`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/BlackMatrix_0.3.1_amd64.deb) | 57 MB |
+| x64 · .rpm package (Fedora/RHEL) | [`BlackMatrix-0.3.1-1.x86_64.rpm`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.3.1/BlackMatrix-0.3.1-1.x86_64.rpm) | 57 MB |
 
 </details>
 
