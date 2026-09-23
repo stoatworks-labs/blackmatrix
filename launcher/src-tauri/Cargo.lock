@@ -225,6 +225,7 @@ version = "0.3.3"
 dependencies = [
  "diag",
  "if-addrs",
+ "libc",
  "serde",
  "serde_json",
  "tauri",
