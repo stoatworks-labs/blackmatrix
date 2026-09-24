@@ -10,6 +10,9 @@ This project is built on other people's work.
 - **[Express](https://expressjs.com/)** (MIT) — HTTP server.
 - **[ws](https://github.com/websockets/ws)** (MIT) — websocket server.
 - **[React](https://react.dev/)** (MIT) — the UI.
+- **[Tauri](https://tauri.app/)** (MIT or Apache-2.0) — the desktop launcher in
+  `launcher/`, which the desktop builds ship; its Rust crates are pinned in
+  `launcher/src-tauri/Cargo.lock`.
 
 ## Build and test
 
