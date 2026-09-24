@@ -1,49 +1,25 @@
 # Attributions
 
-BlackMatrix is built on other people's work. This file lists what that work is, who did
-it, and what it is doing here.
+This project is built on other people's work.
 
-It is generated — the master lists live in the `stoatworks-backend` repo and are
-pushed out by `scripts/sync-attributions.py`. Edit it there, not here.
+## Runtime dependencies
 
-## Third-party code this project uses
+- **[atem-connection](https://github.com/nrkno/sofie-atem-connection)** (MIT) — the
+  ATEM protocol client, and the source of the state shapes and availability enums
+  this project's matrix model is built on. Part of the Sofie TV Automation project.
+- **[Express](https://expressjs.com/)** (MIT) — HTTP server.
+- **[ws](https://github.com/websockets/ws)** (MIT) — websocket server.
+- **[React](https://react.dev/)** (MIT) — the UI.
 
-Libraries, SDKs and frameworks the project is built on or bundles.
+## Build and test
 
-### Tauri
+- **[Vite](https://vite.dev/)** (MIT), **[TypeScript](https://www.typescriptlang.org/)**
+  (Apache-2.0), **[Vitest](https://vitest.dev/)** (MIT), **[tsx](https://github.com/privatenumber/tsx)** (MIT).
 
-<https://tauri.app>  
-Licence: MIT or Apache-2.0  
-Copyright: The Tauri Programme within The Commons Conservancy
+## Specifications
 
-A Cargo and npm dependency — of the app itself under src-tauri/, or of the desktop launcher under launcher/src-tauri/.
-
-Wraps a web front end in a native desktop app using the platform's own webview rather than a bundled browser, so the binary stays small.
-
-### The Rust crate ecosystem
-
-<https://crates.io>  
-Licence: predominantly MIT or Apache-2.0  
-Copyright: the individual crate authors
-
-Cargo dependencies, resolved and pinned in Cargo.lock.
-
-Async runtimes, protocol codecs, serialisation and GUI toolkits. The exact set and versions for any build are in that repo's Cargo.lock, which is the authoritative list.
-
-### The npm ecosystem
-
-<https://www.npmjs.com>  
-Licence: predominantly MIT  
-Copyright: the individual package authors
-
-npm dependencies, resolved and pinned in the lockfile.
-
-Build tooling, test runners and the libraries the front ends are assembled from. The exact set and versions for any build are in that repo's lockfile, which is the authoritative list.
-
-The full transitive dependency set for any build is pinned in this repo's lockfile,
-which is the authoritative list. What is named above is the layers a reader would
-want to know about, not every package that has ever been resolved.
-
-## Getting this wrong
-
-If your work is here and the description is inaccurate, the licence is wrong, or you would rather not be listed — open an issue and it will be fixed.
+- **Blackmagic Videohub Ethernet Protocol v2.3**, from *Videohub Developer
+  Information* (Blackmagic Design, May 2018). Implemented from the published
+  specification. Blackmagic Design, ATEM and Videohub are trademarks of
+  Blackmagic Design Pty. Ltd. This project is not affiliated with or endorsed by
+  Blackmagic Design.

@@ -376,7 +376,3 @@ protocol on it, and `@av/atem-matrix` has no I/O in it at all.
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-<!-- attributions:start -->
-This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
-<!-- attributions:end -->
