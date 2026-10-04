@@ -1,6 +1,6 @@
 name: ci
 
-# Typecheck, test and build every workspace on every push/PR to main.
+# Typecheck, test, build and boot every workspace on every push/PR to main.
 on:
   push:
     branches: [main]
@@ -29,3 +29,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Typecheck, test and build all pass on a server that cannot start: a
+      # route string is valid TypeScript whatever it says, and Express only
+      # rejects it when the route is registered. That is how v0.3.1 through
+      # v0.3.3 all shipped unable to boot at all. So start the built server the
+      # way the packaged app does — node on dist/index.js, not npm start — and
+      # ask it for pages.
+      - name: Boot smoke-test
+        run: node scripts/smoke-boot.mjs

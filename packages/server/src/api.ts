@@ -296,8 +296,14 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
   });
 
   app.use(express.static(WEB_DIST));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(WEB_DIST, 'index.html'), (error) => {
+  // Express 5 names its wildcards: a bare '*' throws while the route is being
+  // registered, so the server died before it listened (v0.3.1 to v0.3.3).
+  // '/{*splat}' matches '/' as well. The `root` matters too: given an absolute
+  // path, send() applies its dotfiles default to every segment of it, so run
+  // from any directory with a dot in its path (~/.local/…, a git worktree under
+  // .claude/) every deep link 404'd while '/' still served.
+  app.get('/{*splat}', (_req, res) => {
+    res.sendFile('index.html', { root: WEB_DIST }, (error) => {
       if (error) res.status(404).send('UI not built — run `npm run build` or use `npm run dev:web`.');
     });
   });

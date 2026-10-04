@@ -24,6 +24,7 @@
     "typecheck": "npm run build:libs && npm run typecheck --workspace @blackmatrix/server && npm run typecheck --workspace @blackmatrix/web",
     "test": "npm run build:libs && vitest run",
     "start": "npm run start --workspace @blackmatrix/server",
+    "smoke": "node scripts/smoke-boot.mjs",
     "capture": "npm run build:libs && npm run capture --workspace @blackmatrix/server --"
   },
   "devDependencies": {

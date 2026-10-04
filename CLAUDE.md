@@ -10,6 +10,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Dev web only: `npm run dev:web`
 - Test: `npm test`
 - Typecheck: `npm run typecheck`
+- Boot smoke-test (after a build): `npm run smoke` — CI runs it; typecheck and build pass on a server that cannot start
 - Build then run: `npm run build && npm start`
 
 ## Layout (packages/)

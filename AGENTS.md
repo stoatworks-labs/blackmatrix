@@ -97,6 +97,7 @@ npm run dev:web      # UI only, proxying to a server on :8533
 npm test             # vitest: protocol codec, protocol server over real TCP, matrix model
 npm run typecheck
 npm run build && npm start
+npm run smoke        # boot the built server as the app does and ask it for pages (CI runs this)
 ```
 
 ## 5. The model, in one paragraph
