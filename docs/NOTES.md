@@ -362,3 +362,10 @@ the mock router (red without the fix, green with). That also affected the existi
 **Unproven on hardware:** all of it. The live rig is exactly the shape it was written for —
 cable it on the Wiring page (two runs) and try router input → switcher input on a spare input
 first, while nothing on air depends on it.
+
+**2026-10-04, later — the phone layout got it too.** "Route through ›" is the first row of the
+destination list when any cables exist, and opens the same panel full-width with thumb-sized
+controls; destination rows and the source picker show the ripple name in cyan. Checked at
+375x812 against `--mock`: plan, take (over TCP to the mock router), and Undo. The user guide
+does not mention the phone entry yet — add it when the guide's "newer than v0.3.4" line comes
+out at the next release, so the site guide and PDF are rebuilt once rather than twice.

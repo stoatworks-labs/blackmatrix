@@ -964,3 +964,31 @@ main > .empty code { color: var(--routed); }
 .through-affected li.onair { color: #ff9b9f; font-weight: 600; }
 .through-refused { margin: 0; color: #ff9b9f; font-size: 11px; line-height: 1.4; }
 
+/* The panel outside the desktop column: it brings its own controls, rather
+   than borrowing the column's `.salvos button` rules. */
+.through header { display: flex; align-items: center; justify-content: space-between; }
+.through h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.through button:not(.linkish) {
+  padding: 5px 9px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+}
+.through button.primary { border-color: var(--routed); color: var(--routed); }
+.through button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- route through and ripple names on a phone --------------------------- */
+
+.mobile-through { flex: 1; overflow-y: auto; padding: 12px; }
+.mobile-through .through { border-bottom: 0; }
+/* Thumb-sized, as every other control in this view is. */
+.mobile-through select { padding: 10px; font-size: 14px; }
+.mobile-through button.primary { padding: 13px; font-size: 14px; }
+.mobile-through-open { border-left-color: var(--cable); }
+.mobile-through-open .mobile-dest-name { color: var(--cable); }
+.mobile-dest-source .ripple { color: var(--cable); }
+.mobile-source-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mobile-source-name .ripple { color: var(--cable); font-size: 11px; }
+

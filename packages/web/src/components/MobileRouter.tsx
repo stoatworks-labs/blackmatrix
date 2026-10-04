@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { isLegal } from '@av/atem-matrix';
 import { groupSources } from '../sourceGroups';
 import type { Crosspoint, RouteMode } from '../takeState';
-import type { DeviceView, Destination } from '../types';
+import type { DeviceView, Destination, Link } from '../types';
 import { ownerName } from '../claims';
+import { rippleOf, type Ripple } from '../wiring';
+import { RouteThroughPanel } from './RouteThroughPanel';
 
 interface MobileRouterProps {
   devices: DeviceView[];
@@ -21,6 +23,10 @@ interface MobileRouterProps {
   onUndo: () => void;
   /** This client's own address, so its own claims read as "you". */
   self: string | null;
+  /** The cabling between devices: what a cabled input is really carrying, and routes through it. */
+  links: Link[];
+  onRouteThrough: (steps: Crosspoint[]) => Promise<void>;
+  onOpenWiring: () => void;
 }
 
 /**
@@ -49,8 +55,12 @@ export function MobileRouter({
   onClear,
   onUndo,
   self,
+  links,
+  onRouteThrough,
+  onOpenWiring,
 }: MobileRouterProps) {
   const [selected, setSelected] = useState<Destination | null>(null);
+  const [through, setThrough] = useState(false);
 
   const matrix = device?.matrix ?? null;
   const sourceById = useMemo(() => {
@@ -58,6 +68,17 @@ export function MobileRouter({
     for (const source of matrix?.sources ?? []) map.set(source.id, source.label);
     return map;
   }, [matrix]);
+
+  /** As the grid's: where the picture on each cabled input really starts. */
+  const ripples = useMemo(() => {
+    const map = new Map<number, Ripple>();
+    if (!device || links.length === 0) return map;
+    for (const source of matrix?.sources ?? []) {
+      const ripple = rippleOf(devices, links, device.id, source.id);
+      if (ripple && !ripple.broken && ripple.origin !== source.label) map.set(source.id, ripple);
+    }
+    return map;
+  }, [devices, links, device, matrix]);
 
   if (!device || !matrix) {
     return (
@@ -108,9 +129,29 @@ export function MobileRouter({
         </div>
       </div>
 
-      {selected ? (
+      {through ? (
+        <div className="mobile-picker">
+          <div className="mobile-picker-head">
+            <button type="button" className="mobile-back" onClick={() => setThrough(false)}>
+              ‹ Destinations
+            </button>
+          </div>
+          {/* The same panel as the desktop column. It is its own preset — a
+              plan on screen and a Take that sends it — so it does not follow
+              the Live/Preset switch here either. */}
+          <div className="mobile-through">
+            <RouteThroughPanel
+              devices={devices}
+              links={links}
+              onRouteThrough={onRouteThrough}
+              onOpenWiring={onOpenWiring}
+            />
+          </div>
+        </div>
+      ) : selected ? (
         <SourcePicker
           device={device}
+          ripples={ripples}
           destination={selected}
           liveSource={matrix.routes[selected.id] ?? -1}
           stagedSource={stagedFor(selected.id)}
@@ -124,6 +165,18 @@ export function MobileRouter({
         />
       ) : (
         <ol className="mobile-list">
+          {links.length > 0 ? (
+            <li className="mobile-section">
+              <ol>
+                <li>
+                  <button type="button" className="mobile-dest mobile-through-open" onClick={() => setThrough(true)}>
+                    <span className="mobile-dest-name">Route through ›</span>
+                    <span className="mobile-dest-source">End to end, across the cables between devices</span>
+                  </button>
+                </li>
+              </ol>
+            </li>
+          ) : null}
           {sections.map(({ section, destinations }) => (
             <li key={section.id} className="mobile-section">
               <span>{section.label}</span>
@@ -150,6 +203,7 @@ export function MobileRouter({
                         </span>
                         <span className="mobile-dest-source">
                           {sourceById.get(live) ?? 'unknown'}
+                          {ripples.get(live) ? <span className="ripple"> · {ripples.get(live)?.origin}</span> : null}
                           {stage !== null ? (
                             <>
                               <span className="arrow"> → </span>
@@ -200,6 +254,8 @@ export function MobileRouter({
 
 interface SourcePickerProps {
   device: DeviceView;
+  /** Cabled inputs whose picture starts somewhere with a different name. */
+  ripples: Map<number, Ripple>;
   destination: Destination;
   liveSource: number;
   stagedSource: number | null;
@@ -208,7 +264,7 @@ interface SourcePickerProps {
 }
 
 /** Only what the switcher will accept here, grouped the way the grid groups columns. */
-function SourcePicker({ device, destination, liveSource, stagedSource, onBack, onPick }: SourcePickerProps) {
+function SourcePicker({ device, ripples, destination, liveSource, stagedSource, onBack, onPick }: SourcePickerProps) {
   const legal = (device.matrix?.sources ?? []).filter((source) => isLegal(source, destination));
   const groups = groupSources(legal);
 
@@ -238,7 +294,14 @@ function SourcePicker({ device, destination, liveSource, stagedSource, onBack, o
                       className={`mobile-source${isLive ? ' live' : ''}${isStaged ? ' staged' : ''}`}
                       onClick={() => onPick(source.id)}
                     >
-                      <span>{source.label}</span>
+                      <span className="mobile-source-name">
+                        {source.label}
+                        {ripples.get(source.id) ? (
+                          <span className="ripple" title={ripples.get(source.id)?.chain}>
+                            carrying {ripples.get(source.id)?.originFull}
+                          </span>
+                        ) : null}
+                      </span>
                       {isLive ? <span className="tag on-air">on air</span> : null}
                       {isStaged && !isLive ? <span className="tag pending">staged</span> : null}
                     </button>

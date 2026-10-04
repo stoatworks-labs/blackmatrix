@@ -329,6 +329,9 @@ export function App() {
             onClear={take.clear}
             onUndo={() => void onUndo()}
             self={api.address}
+            links={links}
+            onRouteThrough={onRouteThrough}
+            onOpenWiring={() => setView('wiring')}
           />
         ) : view === 'sources' ? (
           <SourcesPage
