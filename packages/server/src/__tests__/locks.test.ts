@@ -22,6 +22,7 @@ function configFor(): AppConfig {
     labels: {},
     salvos: [],
     ties: [],
+    links: [],
     failover: [],
   };
 }

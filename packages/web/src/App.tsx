@@ -4,10 +4,12 @@ import { SourcesPage } from './components/SourcesPage';
 import { Matrix } from './components/Matrix';
 import { SalvoPanel, type BuilderEntry } from './components/SalvoPanel';
 import { FailoverPanel } from './components/FailoverPanel';
+import { RouteThroughPanel } from './components/RouteThroughPanel';
+import { WiringPage } from './components/WiringPage';
 import { useFleet } from './useFleet';
 import { useIsMobile } from './useIsMobile';
 import { MobileRouter } from './components/MobileRouter';
-import { useTakeState, type UndoEntry } from './takeState';
+import { useTakeState, type Crosspoint, type UndoEntry } from './takeState';
 import { claimedReason } from './claims';
 import { useSimulatorFleet } from './simulator/useSimulatorFleet';
 import type { Destination } from './types';
@@ -23,12 +25,13 @@ const useFleetImpl = SIMULATOR ? useSimulatorFleet : useFleet;
 export function App() {
   const api = useFleetImpl();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<'matrix' | 'devices' | 'sources'>('matrix');
+  const [view, setView] = useState<'matrix' | 'devices' | 'sources' | 'wiring'>('matrix');
   const [flashNotice, setFlashNotice] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [builder, setBuilder] = useState<BuilderEntry[]>([]);
 
   const devices = api.snapshot?.devices ?? [];
+  const links = api.snapshot?.links ?? [];
   const device = devices.find((candidate) => candidate.id === selectedId) ?? devices[0] ?? null;
 
   // The support footer appends itself to <body>, which for a full-viewport
@@ -115,6 +118,20 @@ export function App() {
     await api.take(entries);
     take.remember(undo);
     take.clear();
+  };
+
+  /**
+   * A route through the wiring. Sent at once rather than staged — the panel's
+   * own plan is the preset — and remembered for undo downstream first, the
+   * reverse of how it went up, so an undo moves the switcher off the cable
+   * before the router changes what the cable carries.
+   */
+  const onRouteThrough = async (steps: Crosspoint[]): Promise<void> => {
+    const undo: UndoEntry[] = steps
+      .map((step) => ({ ...step, from: take.liveSource(step.deviceId, step.destination) }))
+      .filter((entry) => entry.from !== entry.source);
+    await api.routeThrough(steps);
+    if (undo.length > 0) take.remember([...undo].reverse());
   };
 
   /**
@@ -266,6 +283,14 @@ export function App() {
           </button>
           <button
             type="button"
+            className={`view-toggle${view === 'wiring' ? ' on' : ''}`}
+            onClick={() => setView('wiring')}
+            title="Which output is cabled into which input, between devices"
+          >
+            Wiring
+          </button>
+          <button
+            type="button"
             className={`view-toggle${view === 'devices' ? ' on' : ''}`}
             onClick={() => setView('devices')}
             title="Add, edit and remove devices"
@@ -315,6 +340,8 @@ export function App() {
               if (device) await api.setSourceLabel(device.id, input, label);
             }}
           />
+        ) : view === 'wiring' ? (
+          <WiringPage devices={devices} links={links} onEdit={api.editLinks} />
         ) : view === 'devices' ? (
           <DevicesPage
             devices={devices}
@@ -328,6 +355,8 @@ export function App() {
         ) : device ? (
           <Matrix
             device={device}
+            devices={devices}
+            links={links}
             salvoMembers={salvoMembers}
             mode={take.mode}
             staged={take.staged}
@@ -352,6 +381,12 @@ export function App() {
 
         {view === 'matrix' && !isMobile ? (
           <aside className="salvos">
+          <RouteThroughPanel
+            devices={devices}
+            links={links}
+            onRouteThrough={onRouteThrough}
+            onOpenWiring={() => setView('wiring')}
+          />
           <SalvoPanel
           salvos={api.snapshot?.salvos ?? []}
           devices={devices}

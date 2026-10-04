@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { Link } from '@av/atem-matrix';
 import { log } from './log.js';
+
+export type { Link } from '@av/atem-matrix';
 
 export type DeviceKind = 'atem' | 'videohub';
 
@@ -180,6 +183,12 @@ export interface AppConfig {
   labels: Record<string, Record<string, string>>;
   salvos: Salvo[];
   ties: Tie[];
+  /**
+   * The cables between devices: which router output feeds which switcher
+   * input, which switcher output feeds which router input. Written down by an
+   * operator, because nothing on the wire says so. See `Link`.
+   */
+  links: Link[];
   failover: FailoverWatch[];
 }
 
@@ -197,6 +206,7 @@ const DEFAULTS: AppConfig = {
   labels: {},
   salvos: [],
   ties: [],
+  links: [],
   failover: [],
 };
 
@@ -231,10 +241,18 @@ export const MOCK_CONFIG: AppConfig = {
       id: 'tie-house',
       name: 'House screen follows Stage aux 1',
       leader: 'stage:aux.0',
-      follower: 'router:out.1',
+      // Router outputs 9-12 go to screens; 1-8 are cabled into Studio below.
+      follower: 'router:out.8',
       // Cameras 1-4 on the switcher are router inputs 5-8 in this imaginary rig.
       sourceMap: { '1': 4, '2': 5, '3': 6, '4': 7 },
     },
+  ],
+  // Studio is the four-M/E, cabled the way a show rig usually is: router
+  // outputs 1-8 into its inputs 1-8, and its first four auxes back into router
+  // inputs 9-12, so a route can go through the router in either direction.
+  links: [
+    ...Array.from({ length: 8 }, (_, index) => ({ from: `router:out.${index}`, to: `studio:${index + 1}` })),
+    ...Array.from({ length: 4 }, (_, index) => ({ from: `studio:aux.${index}`, to: `router:${index + 8}` })),
   ],
   failover: [
     {
@@ -355,6 +373,7 @@ export function loadConfig(): AppConfig {
       labels: parsed.labels ?? {},
       salvos: parsed.salvos ?? [],
       ties: parsed.ties ?? [],
+      links: parsed.links ?? [],
       failover: (parsed.failover ?? []).map(withFailoverDefaults),
     });
   } catch (error) {

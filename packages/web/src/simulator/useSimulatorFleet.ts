@@ -73,7 +73,20 @@ export function useSimulatorFleet(): FleetApi {
       }
       setError(failures.length > 0 ? failures.join('; ') : null);
     },
+    routeThrough: async (steps) => {
+      // As the server does it: in order, and no further than the first refusal.
+      for (const [index, step] of steps.entries()) {
+        const result = fleet.route(step.deviceId, step.destination, step.source);
+        if (!result.ok) {
+          const rest = steps.slice(index + 1).map((later) => later.destination);
+          setError(`${step.destination}: ${result.reason}${rest.length > 0 ? ` — stopped before ${rest.join(', ')}` : ''}`);
+          return;
+        }
+      }
+      setError(null);
+    },
     setSourceLabel: async (deviceId, source, label) => fleet.setSourceLabel(deviceId, source, label),
+    editLinks: async (change) => report(fleet.editLinks(change)),
     // A demo must not sweep somebody's network, and from a browser it could not
     // anyway: there is no raw socket to sweep with.
     discover: async () => ({ ok: true, subnets: [], devices: [] }),

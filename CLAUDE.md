@@ -31,6 +31,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Devices are `RoutableDevice`: ATEM (real/mock/replayed capture) or Videohub. A Videohub owns its own locks.
 - `npm run capture -- <address>` takes a capture off hardware; `"capture": "<file>"` replays it as a device.
 - Ties make one destination follow another across boxes, one level deep.
+- **Links** (`config.links`, the Wiring page) are the cables between devices: `from` an output (`dev:destId`), `to` an input (`dev:sourceId`), one cable per input. `traceSource` follows a picture upstream; `planRoute` plans a route through them (both pure, in `@av/atem-matrix/links.ts`). `POST /api/route-through` sends one upstream-first, stops at the first refusal, and waits for each device to confirm before cutting the next onto its cable — not a take.
 - Failover watches fire an ordinary salvo. Disarmed by default, latching, and never before the watched thing has been seen working once. See `docs/failover.md`.
 - A refused route is invisible to a media server (ACK + unchanged status), so a lock silently defeats a failover — `videohub.failoverClients` walks through locks.
 - Line protocol is one-based; Videohub is zero-based. Mock ports override with `BLACKMATRIX_PORT` / `_VIDEOHUB_BASE_PORT` / `_ASCII_PORT` / `_MOCK_ROUTER_PORT`.

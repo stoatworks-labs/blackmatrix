@@ -3,11 +3,15 @@ import { isLegal } from '@av/atem-matrix';
 import { groupSources, type GroupedSources } from '../sourceGroups';
 import { useViewState } from '../useViewState';
 import type { Crosspoint, RouteMode } from '../takeState';
-import type { DeviceView, Destination, Source } from '../types';
+import type { DeviceView, Destination, Link, Source } from '../types';
 import { ownerName } from '../claims';
+import { cabledTo, cabledToShort, rippleOf, type Ripple } from '../wiring';
 
 interface MatrixProps {
   device: DeviceView;
+  /** The whole fleet and its cabling, so a cabled input can say what it is really carrying. */
+  devices: DeviceView[];
+  links: Link[];
   /** Live routes on click; preset stages for the next take. */
   mode: RouteMode;
   /** Staged crosspoints across the whole fleet, keyed `deviceId:destination`. */
@@ -69,6 +73,8 @@ const Cell = memo(function Cell({ routed, staged, legal, claimed, crosshair, tit
 
 export function Matrix({
   device,
+  devices,
+  links,
   mode,
   staged,
   onRoute,
@@ -91,6 +97,32 @@ export function Matrix({
   }, [matrix]);
 
   const groups = useMemo(() => groupSources(matrix?.sources ?? []), [matrix]);
+
+  /**
+   * The ripple: for every input on this device with a cable into it, where the
+   * picture on that cable actually starts. Recomputed with the snapshot, so it
+   * moves when the router upstream does.
+   */
+  const ripples = useMemo(() => {
+    const map = new Map<number, Ripple>();
+    if (links.length === 0) return map;
+    for (const source of matrix?.sources ?? []) {
+      const ripple = rippleOf(devices, links, device.id, source.id);
+      if (ripple) map.set(source.id, ripple);
+    }
+    return map;
+  }, [devices, links, device.id, matrix]);
+
+  /** And the other way: where each of this device's outputs is cabled to — short for the row, full for its tooltip. */
+  const cables = useMemo(() => {
+    const map = new Map<string, { short: string[]; full: string[] }>();
+    if (links.length === 0) return map;
+    for (const destination of matrix?.destinations ?? []) {
+      const full = cabledTo(devices, links, device.id, destination.id);
+      if (full.length > 0) map.set(destination.id, { full, short: cabledToShort(devices, links, device.id, destination.id) });
+    }
+    return map;
+  }, [devices, links, device.id, matrix]);
 
   /** The visible column list, and the grid template that matches it. */
   const { columns, template } = useMemo(() => {
@@ -185,8 +217,10 @@ export function Matrix({
           column.kind === 'source' ? (
             <div
               key={`${column.group.group.id}-${column.source.id}`}
-              className={`colhead${hoverColumn === columnIndex ? ' hot' : ''} kind-${column.source.kind}`}
-              title={`${column.source.label} (source ${column.source.id})`}
+              className={`colhead${hoverColumn === columnIndex ? ' hot' : ''} kind-${column.source.kind}${
+                ripples.has(column.source.id) ? ' cabled' : ''
+              }`}
+              title={columnTitle(column.source, ripples.get(column.source.id))}
             >
               <span className="colhead-text">{column.source.short || column.source.label}</span>
             </div>
@@ -226,6 +260,7 @@ export function Matrix({
                 : destinations.map((destination) => {
                     const routedSourceId = matrix.routes[destination.id] ?? -1;
                     const routedSource = sourceById.get(routedSourceId);
+                    const ripple = ripples.get(routedSourceId);
                     return (
                       <Row
                         key={destination.id}
@@ -235,6 +270,8 @@ export function Matrix({
                         routedLabel={
                           routedSource?.label ?? (routedSourceId < 0 ? 'unknown' : `source ${routedSourceId}`)
                         }
+                        ripple={ripple && ripple.origin !== routedSource?.label ? ripple : null}
+                        cabledTo={cables.get(destination.id) ?? null}
                         owner={device.locks[destination.id] ?? null}
                         self={self}
                         stagedSource={staged[`${device.id}:${destination.id}`]?.source ?? null}
@@ -270,6 +307,10 @@ interface RowProps {
   columns: Column[];
   routedSourceId: number;
   routedLabel: string;
+  /** Where the routed source's picture really starts, when a cable feeds it and the name differs. */
+  ripple: Ripple | null;
+  /** Where this destination is cabled to, when it is a physical output with a cable on it. */
+  cabledTo: { short: string[]; full: string[] } | null;
   owner: string | null;
   stagedSource: number | null;
   stagedLabel: string | null;
@@ -292,6 +333,8 @@ function Row({
   columns,
   routedSourceId,
   routedLabel,
+  ripple,
+  cabledTo,
   owner,
   stagedSource,
   stagedLabel,
@@ -320,7 +363,9 @@ function Row({
           <button
             type="button"
             className="rowhead-label"
-            title={`${destination.label} — double-click to rename${destination.caveat ? `\n${destination.caveat}` : ''}`}
+            title={`${destination.label} — double-click to rename${destination.caveat ? `\n${destination.caveat}` : ''}${
+              cabledTo ? `\nCabled to ${cabledTo.full.join(', ')}` : ''
+            }`}
             onDoubleClick={() => {
               const next = window.prompt(`Name for ${destination.label}`, destination.label);
               if (next !== null) onRename(destination.id, next);
@@ -332,6 +377,7 @@ function Row({
                 !
               </span>
             ) : null}
+            {cabledTo ? <span className="cable-mark">⇢ {cabledTo.short.join(', ')}</span> : null}
           </button>
           {stagedSource !== null ? (
             <button
@@ -343,8 +389,12 @@ function Row({
               {routedLabel} <span className="arrow">→</span> {stagedLabel ?? stagedSource}
             </button>
           ) : (
-            <span className="rowhead-source" title={`Currently taking ${routedLabel}`}>
+            <span
+              className="rowhead-source"
+              title={`Currently taking ${routedLabel}${ripple ? `\nCarrying ${ripple.chain}` : ''}`}
+            >
               {routedLabel}
+              {ripple ? <span className="ripple"> · {ripple.broken ? '?' : ripple.origin}</span> : null}
             </span>
           )}
         </div>
@@ -426,4 +476,12 @@ function Row({
       })}
     </>
   );
+}
+
+/** A column's tooltip: the source, and — when a cable feeds it — what is really on it. */
+function columnTitle(source: Source, ripple: Ripple | undefined): string {
+  const base = `${source.label} (source ${source.id})`;
+  if (!ripple) return base;
+  const carrying = ripple.broken ? `unknown — ${ripple.broken}` : ripple.originFull;
+  return `${base}\nCabled from ${ripple.via}\nCarrying ${carrying}`;
 }

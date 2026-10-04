@@ -335,3 +335,29 @@ unmerged.
 
 **BlackMatrix has no About window** — it is not in `scripts/sync-about.py`'s repo list,
 though it does carry the support footer. See [about window](https://github.com/stoatworks-labs/fleet-notes/blob/main/notes/reference_about_window.md).
+
+**2026-10-04 — wiring and route-through.** Asked for mid-show on a rig of an **ATEM 4 M/E
+Constellation 4K** (`192.168.10.240`) plus a **Smart Videohub 12G 40x40** (`192.168.10.150`)
+as a fleet device: router outputs 1–20 labelled "4 M/E Switcher In - 1..20", router inputs
+21–28 labelled "4 M/E Aux 1–6", "PGM - 4K", "PGM - M/E 2". That is the first time a real
+Videohub has been one of this app's devices that I have seen — connected, and its 40x40 labels
+and routing read correctly through a read-only `GET /api/fleet`. Nothing was routed or written
+from here: the show was live.
+
+What got built, all against `--mock` only:
+
+- `config.links` + the **Wiring** page: cables as `from` output → `to` input, added as runs.
+- Ripple labels in the grid: a cabled input's column is underlined cyan and a row taking it
+  says where the picture on that cable really starts.
+- **Route through** panel + `POST /api/route-through`: plan from the snapshot, send upstream
+  first, stop at the first refusal, wait for each device to confirm before the next.
+- Mock fleet is now cabled: Router out 1–8 → Studio in 1–8, Studio aux 1–4 → Router in 9–12.
+  The mock tie's follower moved from `router:out.1` to `router:out.8` so it does not fight a cable.
+
+Found on the way: **a Videohub's lock changes never reached a browser** — `Fleet.refresh()` only
+diffed routes and labels, and a router's lock moves alone. Fixed and tested over real TCP against
+the mock router (red without the fix, green with). That also affected the existing claim flag.
+
+**Unproven on hardware:** all of it. The live rig is exactly the shape it was written for —
+cable it on the Wiring page (two runs) and try router input → switcher input on a spare input
+first, while nothing on air depends on it.

@@ -166,6 +166,15 @@ into one entry that steers toward adding it as a switcher.
   server and client in `@av/videohub` are written from the same spec from opposite ends,
   and testing them against each other is how a disagreement surfaces.
 - **Ties are one level deep, on purpose.** A follower's move never fires another tie.
+- **Links are not ties.** A link is a cable (`from` output, `to` input) and moves nothing by
+  itself; a tie is a rule that moves a destination. Route-through plans from links and the live
+  routes, client-side, with `planRoute`; the server only sends the steps.
+- **A route through is not a take.** A take tries every crosspoint and names the failures; a
+  route through stops at the first refusal and waits for each device to confirm before the next is
+  cut onto its cable. A take's "carry on" would put a cable on program that never got the picture.
+- **A Videohub's locks move without its routes moving.** `refresh()` used to compare only routes and
+  labels, so a claim taken on a real router never reached a browser until something else changed.
+  It now diffs the device-owned locks too.
 - **A Videohub device gets no emulation by default.** It already speaks the protocol;
   putting an emulation in front of one only happens if a `videohubPort` says so.
 - **Discovery must exclude this machine's own addresses.** Companion's Videohub panel

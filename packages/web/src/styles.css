@@ -8,6 +8,8 @@
   --routed: #ffb020;
   --onair: #e5484d;
   --ok: #3fb950;
+  /* Anything that came down a cable from another device. */
+  --cable: #5fb8c4;
   --cell: 34px;
   --rowhead: 268px;
   /* A folded source group narrows to this, rather than vanishing. */
@@ -887,3 +889,78 @@ main > .empty code { color: var(--routed); }
 .watch-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 0; }
 .watch-form .hint { margin: 0; color: var(--dim); font-size: 10px; line-height: 1.45; }
 .watch-form .hint code { color: var(--routed); }
+
+/* --- wiring: cables between devices ---------------------------------- */
+/*
+ * Cyan is the cable's colour everywhere it shows: the mark on a column whose
+ * input has a cable into it, the name of what is really on that cable, and the
+ * cable lines in a route-through plan. Amber stays the colour of a route.
+ */
+.colhead.cabled { box-shadow: inset 0 -3px 0 var(--cable); }
+.cable-mark { margin-left: 6px; color: var(--cable); font-size: 10px; }
+.rowhead-source .ripple { color: var(--cable); }
+.arrow { color: var(--dim); }
+
+.wiring-form .wiring-preview { grid-column: 1 / -1; font-size: 11px; }
+.wiring-preview ol { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0 0 0 18px; }
+.wiring-preview .replaces { color: var(--routed); font-style: normal; }
+
+.cable-group { margin-top: 14px; }
+.cable-group-head { display: flex; align-items: center; gap: 10px; }
+.cable-group-head strong { font-size: 13px; }
+.cable-group-head button { margin-left: auto; }
+.cable-list li { padding: 7px 12px; border-left-color: var(--cable); }
+.cable-list .device-main > span:first-child { font-size: 12px; }
+
+/* --- route through: shares the right-hand column ----------------------- */
+
+.through { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.through .hint { margin: 0; color: var(--dim); font-size: 11px; line-height: 1.45; }
+.through header .linkish { font-size: 11px; }
+.through-form { display: flex; flex-direction: column; gap: 5px; }
+.through-label { margin-top: 3px; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.through select {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+.through-choice { display: flex; flex-direction: column; gap: 3px; color: var(--dim); font-size: 10px; }
+
+.through-steps { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.through-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--routed);
+  border-radius: 4px;
+  font-size: 11px;
+}
+.through-steps li.done { border-left-color: var(--line); color: var(--dim); }
+.through-steps em { color: var(--routed); font-style: normal; }
+.through-steps li.done em { color: var(--dim); }
+.through-take { color: var(--text); }
+.through-steps li.done .through-take { color: var(--dim); }
+.through-already { color: var(--dim); font-style: italic; }
+.through-cable { color: var(--cable); font-size: 10px; }
+
+.through-affected {
+  padding: 6px 8px;
+  background: #2a2413;
+  border: 1px solid #5a4a1c;
+  border-radius: 4px;
+  color: #ffd88a;
+  font-size: 11px;
+}
+.through-affected ul { margin: 4px 0 0; padding: 0 0 0 16px; }
+.through-affected li.onair { color: #ff9b9f; font-weight: 600; }
+.through-refused { margin: 0; color: #ff9b9f; font-size: 11px; line-height: 1.4; }
+

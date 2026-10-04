@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DeviceInput, DiscoverResult, FailoverWatch, FleetSnapshot } from './types';
+import type { DeviceInput, DiscoverResult, FailoverWatch, FleetSnapshot, Link } from './types';
 
 export interface FleetApi {
   snapshot: FleetSnapshot | null;
@@ -28,9 +28,17 @@ export interface FleetApi {
   removeDevice: (id: string) => Promise<string[]>;
   reconnectDevice: (id: string) => Promise<void>;
   setInputPort: (deviceId: string, input: number, externalPortType: number) => Promise<void>;
+  /**
+   * A route through the wiring: crosspoints in signal order, upstream first.
+   * The server stops at the first refusal and waits for each device to confirm
+   * before cutting the next one onto its cable.
+   */
+  routeThrough: (steps: Array<{ deviceId: string; destination: string; source: number }>) => Promise<void>;
   /** Apply several crosspoints as one take. */
   take: (crosspoints: Array<{ deviceId: string; destination: string; source: number }>) => Promise<void>;
   setSourceLabel: (deviceId: string, source: number, label: string) => Promise<void>;
+  /** Re-cable: unplug the inputs named in `remove`, then plug in `add`, as one edit. */
+  editLinks: (change: { add?: Link[]; remove?: string[] }) => Promise<void>;
   discover: () => Promise<DiscoverResult>;
   notice: string | null;
   clearNotice: () => void;
@@ -102,6 +110,7 @@ export function useFleet(): FleetApi {
           setSnapshot({
             devices: message.devices,
             salvos: message.salvos,
+            links: message.links ?? [],
             // An older server sends no failover at all; an empty list reads the
             // same way in the UI as "none configured", which is the truth.
             failover: message.failover ?? [],
@@ -176,8 +185,10 @@ export function useFleet(): FleetApi {
     setInputPort: (deviceId, input, externalPortType) =>
       guard(() => post(`/api/devices/${deviceId}/input`, { input, externalPortType })),
     take: (crosspoints) => guard(() => post('/api/take', { crosspoints })),
+    routeThrough: (steps) => guard(() => post('/api/route-through', { steps })),
     setSourceLabel: (deviceId, source, label) =>
       guard(() => post(`/api/devices/${deviceId}/label`, { source, label })),
+    editLinks: (change) => guard(() => post('/api/links', change)),
     discover: async () => {
       try {
         const result = await request<DiscoverResult>('/api/discover', 'POST', {});

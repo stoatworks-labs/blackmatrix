@@ -52,6 +52,7 @@ function configFor(watch: FailoverWatch): AppConfig {
     labels: {},
     salvos: [],
     ties: [],
+    links: [],
     failover: [watch],
   };
 }

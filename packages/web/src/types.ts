@@ -12,7 +12,7 @@
  */
 // Imported as well as re-exported: `export type { X } from` forwards the name
 // without binding it locally, and DeviceView below needs to refer to it.
-import type { MatrixModel } from '@av/atem-matrix';
+import type { Link, MatrixModel } from '@av/atem-matrix';
 
 export type {
   Acceptance,
@@ -25,6 +25,7 @@ export type {
   SourceKind,
   SourcePorts,
 } from '@av/atem-matrix';
+export type { Endpoint, Link, PathStep, PlannedRoute, Trace } from '@av/atem-matrix';
 export { PORT_LABELS, portLabel } from '@av/atem-matrix';
 
 export interface DeviceView {
@@ -112,5 +113,7 @@ export interface DeviceInput {
 export interface FleetSnapshot {
   devices: DeviceView[];
   salvos: Salvo[];
+  /** Cables between devices. Empty from a server older than the wiring page. */
+  links: Link[];
   failover: FailoverView[];
 }

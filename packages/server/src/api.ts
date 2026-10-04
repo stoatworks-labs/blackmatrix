@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type Request } from 'express';
 import { normalizeAddress, type LockAction } from '@av/videohub';
-import { withFailoverDefaults, type DeviceConfig, type FailoverWatch, type Salvo } from './config.js';
+import { withFailoverDefaults, type DeviceConfig, type FailoverWatch, type Link, type Salvo } from './config.js';
 import type { Fleet } from './fleet.js';
 import type { FailoverController } from './failover.js';
 import { scan } from './discovery.js';
@@ -141,6 +141,27 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
     res.status(result.ok ? 200 : 409).json(result);
   });
 
+  /**
+   * A route through the wiring, as planned from the snapshot: upstream first,
+   * stopping at the first refusal. See `Fleet.routeThrough`.
+   */
+  app.post('/api/route-through', async (req, res) => {
+    const { steps } = req.body as { steps?: Array<{ deviceId: string; destination: string; source: number }> };
+    if (
+      !Array.isArray(steps) ||
+      steps.length === 0 ||
+      !steps.every(
+        (step) =>
+          typeof step?.deviceId === 'string' && typeof step.destination === 'string' && Number.isInteger(step.source),
+      )
+    ) {
+      res.status(400).json({ ok: false, reason: 'expected { steps: [{deviceId, destination, source}] }' });
+      return;
+    }
+    const result = await fleet.routeThrough(steps, clientOf(req), UI_LOCKS);
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
   app.post('/api/devices/:id/lock', (req, res) => {
     const { destination, action } = req.body as { destination?: string; action?: LockAction };
     if (typeof destination !== 'string' || !['lock', 'unlock', 'force'].includes(action ?? '')) {
@@ -205,6 +226,33 @@ export function createApp(fleet: Fleet, port: number, failover?: FailoverControl
 
   app.post('/api/salvos/:id/take', async (req, res) => {
     const result = await fleet.takeSalvo(req.params.id, clientOf(req), UI_LOCKS);
+    res.status(result.ok ? 200 : 409).json(result);
+  });
+
+  // --- wiring between devices ---------------------------------------------
+  //
+  // No route endpoint of its own: a route through the wiring is planned from
+  // the snapshot, and what it sends is an ordinary take — the same claims, the
+  // same legality, the same refusals as any other crosspoint.
+
+  app.get('/api/links', (_req, res) => {
+    res.json(fleet.links);
+  });
+
+  app.post('/api/links', (req, res) => {
+    const body = (req.body ?? {}) as { add?: unknown; remove?: unknown };
+    const add = body.add ?? [];
+    const remove = body.remove ?? [];
+    if (
+      !Array.isArray(add) ||
+      !Array.isArray(remove) ||
+      !add.every((link) => typeof link?.from === 'string' && typeof link?.to === 'string') ||
+      !remove.every((ref) => typeof ref === 'string')
+    ) {
+      res.status(400).json({ ok: false, reason: 'expected { add?: [{ from, to }], remove?: [to] }' });
+      return;
+    }
+    const result = fleet.editLinks({ add: add as Link[], remove: remove as string[] });
     res.status(result.ok ? 200 : 409).json(result);
   });
 

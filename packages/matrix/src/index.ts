@@ -12,6 +12,29 @@ export { applyRouteToState } from './mutate.js';
 export { ExternalPortType, InternalPortType, MeAvailability, SourceAvailability } from './enums.js';
 export { applyRoute, type AtemRouterCommands } from './apply.js';
 export {
+  checkLinks,
+  inputRef,
+  linkInto,
+  linksFrom,
+  outputRef,
+  parseInputRef,
+  parseOutputRef,
+  planRoute,
+  traceSource,
+  type Affected,
+  type Endpoint,
+  type InputRef,
+  type Link,
+  type OutputRef,
+  type PathStep,
+  type PlannedRoute,
+  type PlanOptions,
+  type PlanResult,
+  type Trace,
+  type TraceHop,
+  type WiredDevice,
+} from './links.js';
+export {
   ATEM_SECTIONS,
   PORT_LABELS,
   portLabel,

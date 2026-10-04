@@ -145,6 +145,43 @@ the REST API only.
 
 ---
 
+## Wiring, and routing through the router
+
+When a Videohub feeds the switcher — router outputs cabled into switcher inputs, switcher auxes
+cabled back into router inputs — tell the app how it is cabled, on the **Wiring** page. Nothing on
+the network says so: the router knows it has an output called "Switcher In 3", the switcher knows it
+has an input 3, and only whoever ran the cable knows they are the same one.
+
+Add cables as a run: *from* a device and its first output, *into* a device and its first input,
+and how many. "Router outputs 1 to 20 into switcher inputs 1 to 20" is one run; "switcher auxes 1
+to 6 into router inputs 21 to 26" is another. Only physical sockets are offered — router outputs
+and switcher auxes on one side, router inputs and switcher inputs on the other. **Adding cables
+changes nothing on any device**; it is a drawing of the rig, kept in this app's config.
+
+Once it is written down:
+
+- **The grid shows what each cabled input is really carrying.** A cabled column gets a cyan
+  underline, and a row taking it reads `Camera 3 · Patch Panel In 7` — the switcher's own name,
+  then where the picture on that cable starts. Hover for the whole chain. A router row says which
+  switcher input it feeds.
+- **Route through** (top of the right-hand column) routes end to end. *From* is a source, or a
+  cabled output ("whatever Aux 1 is carrying"); *to* is a destination, or a cabled input ("the
+  cable into switcher input 3"). It works out the crosspoints, lists what else they would change
+  — anything already watching a cable that gets repointed, with program in red — and sends
+  nothing until **Take route**.
+  - Router input → switcher input is one router crosspoint.
+  - Switcher aux → router output is one router crosspoint.
+  - Router input → a switcher bus uses a cable already carrying that input when there is one,
+    and otherwise offers every cable that could, least disruptive first, for you to pick.
+- **A route through goes upstream first and stops at the first refusal.** If the router output is
+  claimed, the switcher is not cut to a cable that never got the picture. Each device is also
+  given time to confirm its route before the next one is cut onto its cable.
+
+Route through ignores the Live/Preset switch: its plan on screen *is* the preset, and it re-plans
+as the rig moves. Undo puts it back, switcher first.
+
+---
+
 ## Redundant systems
 
 A redundant media server rig is two machines playing the same show and a router downstream deciding

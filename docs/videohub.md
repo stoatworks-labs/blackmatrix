@@ -166,6 +166,31 @@ mapping leaves the follower alone and logs it. Ties are one level deep — a
 follower's own move never fires another tie, which is the feature rather than a
 limitation: chained ties are a loop waiting to happen.
 
+## Wiring: cables between devices, and routing through them
+
+A tie says "this destination follows that one". **Wiring** is the cabling itself — which output is
+plugged into which input — and is what a route *through* the router needs:
+
+```jsonc
+"links": [
+  { "from": "hub:out.0",  "to": "atem:1" },   // router output 1 into switcher input 1
+  { "from": "atem:aux.0", "to": "hub:20" }    // switcher aux 1 into router input 21
+]
+```
+
+`from` is `deviceId:destinationId`, `to` is `deviceId:sourceId` — router numbering zero-based as on
+the wire, ATEM inputs by source id. One cable per input; a cable joins two different devices. The
+Wiring page writes these, and the routing grid, the Wiring page and the **Route through** panel
+all read them. With them the app can say what a switcher input is really carrying, and plan a
+route from a router input to a switcher bus, or a switcher output through the router to a router
+output — see the user guide.
+
+Planning is done from the snapshot (`planRoute` in `@av/atem-matrix`, pure and tested). Sending
+goes through `POST /api/route-through { steps }`, which is deliberately **not a take**: it goes in
+signal order, stops at the first refusal, and waits for each device to confirm its route before
+the next device is cut onto that device's cable. Ties and wiring are independent; a tie still
+fires one level deep on the change, wherever the change came from.
+
 ## Trying it by hand
 
 ```bash

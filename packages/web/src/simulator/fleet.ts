@@ -7,7 +7,8 @@ import {
   type MatrixModel,
 } from '@av/atem-matrix';
 import type { AtemState } from 'atem-connection';
-import type { DeviceView, FailoverView, FailoverWatch, FleetSnapshot, Salvo } from '../types';
+import { checkLinks } from '@av/atem-matrix';
+import type { DeviceView, FailoverView, FailoverWatch, FleetSnapshot, Link, Salvo } from '../types';
 import { CATALOGUE, type CatalogueEntry } from './catalogue';
 
 /**
@@ -34,6 +35,7 @@ const STORE_KEY = 'blackmatrix.simulator.v1';
 export class SimulatedFleet {
   private devices: SimDevice[] = [];
   private salvoList: Salvo[] = [];
+  private linkList: Link[] = [];
   private watchList: FailoverView[] = [];
   private listeners = new Set<() => void>();
   private counter = 0;
@@ -60,6 +62,7 @@ export class SimulatedFleet {
         JSON.stringify({
           devices: this.devices.map((device) => ({ id: device.id, name: device.name, entry: device.entry.id })),
           salvos: this.salvoList,
+          links: this.linkList,
           failover: this.watchList,
         }),
       );
@@ -75,6 +78,7 @@ export class SimulatedFleet {
       const stored = JSON.parse(raw) as {
         devices?: Array<{ id: string; name: string; entry: string }>;
         salvos?: Salvo[];
+        links?: Link[];
         failover?: FailoverView[];
       };
       for (const device of stored.devices ?? []) {
@@ -82,6 +86,7 @@ export class SimulatedFleet {
         if (entry) this.create(entry, device.name, device.id);
       }
       this.salvoList = stored.salvos ?? [];
+      this.linkList = stored.links ?? [];
       // A watch comes back disarmed and unfired: what a reload proves is that
       // the configuration survived, not that anything is still switched over.
       this.watchList = (stored.failover ?? []).map((watch) => ({
@@ -212,6 +217,22 @@ export class SimulatedFleet {
     return this.salvoList;
   }
 
+  /** As the server's: unplug first, then plug in, checked and refused as a whole. */
+  editLinks(change: { add?: Link[]; remove?: string[] }): { ok: boolean; reason?: string } {
+    const remove = new Set(change.remove ?? []);
+    const add = change.add ?? [];
+    const next = [...this.linkList.filter((link) => !remove.has(link.to)), ...add];
+    const devices = this.snapshot().devices;
+    const problem = checkLinks(add, devices, devices.map((device) => device.id));
+    if (problem) return { ok: false, reason: problem };
+    const inputs = next.map((link) => link.to);
+    const twice = inputs.find((ref, index) => inputs.indexOf(ref) !== index);
+    if (twice) return { ok: false, reason: `${twice} is already fed by a cable — remove that one first` };
+    this.linkList = next;
+    this.changed();
+    return { ok: true };
+  }
+
   saveSalvo(salvo: Salvo): void {
     salvo.id ||= `salvo-${Date.now().toString(36)}`;
     const at = this.salvoList.findIndex((candidate) => candidate.id === salvo.id);
@@ -302,6 +323,8 @@ export class SimulatedFleet {
         locks: device.locks,
       })),
       salvos: this.salvoList,
+      // A removed device's cables stay, as on the server; they simply lead nowhere.
+      links: this.linkList,
       failover: this.watchList,
     };
   }

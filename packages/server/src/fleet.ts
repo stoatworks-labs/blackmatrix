@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { isLegal, type Destination, type MatrixModel, type Source } from '@av/atem-matrix';
+import { checkLinks, isLegal, type Destination, type MatrixModel, type Source } from '@av/atem-matrix';
 import {
   VideohubServer,
   normalizeAddress,
@@ -7,7 +7,7 @@ import {
   type RouterBackend,
   type RouterUpdate,
 } from '@av/videohub';
-import type { AppConfig, DeviceConfig, Salvo, Tie } from './config.js';
+import type { AppConfig, DeviceConfig, Link, Salvo, Tie } from './config.js';
 import { log } from './log.js';
 import { AtemRoutable, type RoutableDevice } from './atem/device.js';
 import { MockDevice } from './atem/mock.js';
@@ -33,6 +33,8 @@ export interface DeviceView {
 export interface FleetSnapshot {
   devices: DeviceView[];
   salvos: Salvo[];
+  /** The cabling between devices, so every client can follow a picture across them. */
+  links: Link[];
   /** Empty until a failover controller is attached. */
   failover: unknown[];
 }
@@ -70,6 +72,8 @@ interface DeviceEntry {
   backend: AtemRouterBackend;
   /** Identifies the destination/source shape, to spot a switcher changing under us. */
   shape: string;
+  /** The locks last reported by a device that owns its own (a Videohub), to spot them moving. */
+  ownLocks: Record<string, string | null>;
   listeners: Set<(update: RouterUpdate) => void>;
 }
 
@@ -123,6 +127,7 @@ export class Fleet extends EventEmitter {
       videohub: null,
       backend: null as unknown as AtemRouterBackend,
       shape: '',
+      ownLocks: {},
       listeners: new Set(),
     };
     entry.backend = new AtemRouterBackend(this, entry);
@@ -251,6 +256,12 @@ export class Fleet extends EventEmitter {
     for (const tie of this.config.ties) {
       if (tie.leader.startsWith(`${id}:`) || tie.follower.startsWith(`${id}:`)) orphaned.push(`tie "${tie.name}"`);
     }
+    // Cables too: a switcher taken out for the afternoon is still cabled the
+    // same way when it comes back.
+    const cables = this.config.links.filter(
+      (link) => link.from.startsWith(`${id}:`) || link.to.startsWith(`${id}:`),
+    ).length;
+    if (cables > 0) orphaned.push(`${cables} cable${cables === 1 ? '' : 's'} on the wiring page`);
 
     this.emit('change');
     this.emit('configChanged');
@@ -308,6 +319,23 @@ export class Fleet extends EventEmitter {
       if (!entry.locks.has(destination.id)) entry.locks.set(destination.id, null);
     }
 
+    // A Videohub reports its locks in its own status updates, and they move
+    // without any route moving — so without this, a claim taken on the router
+    // (by this app or by a panel) never reached a browser until something else
+    // happened to change.
+    if (entry.runner.locks) {
+      const locks = entry.runner.locks();
+      const movedLocks: number[] = [];
+      matrix.destinations.forEach((destination, index) => {
+        if ((entry.ownLocks[destination.id] ?? null) !== (locks[destination.id] ?? null)) movedLocks.push(index);
+      });
+      entry.ownLocks = locks;
+      if (previous && movedLocks.length > 0 && shapeOf(matrix) === entry.shape) {
+        this.notify(entry, { type: 'locks', outputs: movedLocks });
+        this.emit('change');
+      }
+    }
+
     const shape = shapeOf(matrix);
     if (shape !== entry.shape) {
       entry.shape = shape;
@@ -363,6 +391,7 @@ export class Fleet extends EventEmitter {
         locks: this.locksOf(entry),
       })),
       salvos: this.config.salvos,
+      links: this.config.links,
       failover: this.failoverView(),
     };
   }
@@ -600,6 +629,70 @@ export class Fleet extends EventEmitter {
     return { ok: failures.length === 0, applied, failures };
   }
 
+  /**
+   * A route through the wiring: crosspoints in signal order, upstream first.
+   *
+   * Not a take. A take tries everything and reports what failed; this stops at
+   * the first refusal, because every step after it would put a cable on air
+   * that is not carrying the picture — a router output refused by a lock, then
+   * a switcher cutting program to the input that output feeds, is the wrong
+   * camera on program. For the same reason, when the next step is on another
+   * device it waits until this one has confirmed its route (a router answers
+   * with a status update; a switcher with its state) before going on.
+   *
+   * A step already routed sends nothing.
+   */
+  async routeThrough(
+    steps: Array<{ deviceId: string; destination: string; source: number }>,
+    client: string,
+    options: RouteOptions = {},
+  ): Promise<{ ok: boolean; applied: number; failures: string[] }> {
+    let applied = 0;
+    for (const [index, step] of steps.entries()) {
+      const next = steps[index + 1];
+      const already = this.entries.get(step.deviceId)?.matrix?.routes[step.destination] === step.source;
+      if (!already) {
+        const result = await this.route(step.deviceId, step.destination, step.source, client, options);
+        if (!result.ok) {
+          return { ok: false, applied, failures: [`${step.deviceId}/${step.destination}: ${result.reason}`, ...stopped(steps, index)] };
+        }
+        applied++;
+      }
+      if (next && next.deviceId !== step.deviceId) {
+        const landed = await this.waitForRoute(step.deviceId, step.destination, step.source, ROUTE_CONFIRM_MS);
+        if (!landed) {
+          return {
+            ok: false,
+            applied,
+            failures: [
+              `${step.deviceId}/${step.destination}: not confirmed within ${ROUTE_CONFIRM_MS / 1000} s`,
+              ...stopped(steps, index),
+            ],
+          };
+        }
+      }
+    }
+    return { ok: true, applied, failures: [] };
+  }
+
+  /** Resolves true once the device reports this route, false at the deadline. */
+  private waitForRoute(deviceId: string, destination: string, source: number, timeoutMs: number): Promise<boolean> {
+    const landed = (): boolean => this.entries.get(deviceId)?.matrix?.routes[destination] === source;
+    if (landed()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const finish = (value: boolean): void => {
+        clearTimeout(timer);
+        this.off('change', onChange);
+        resolve(value);
+      };
+      const onChange = (): void => {
+        if (landed()) finish(true);
+      };
+      const timer = setTimeout(() => finish(false), timeoutMs);
+      this.on('change', onChange);
+    });
+  }
+
   /** Assign an input to a plug. Refused when the device has no such notion. */
   async setInputPort(deviceId: string, inputId: number, externalPortType: number): Promise<RouteResult> {
     const entry = this.entries.get(deviceId);
@@ -628,6 +721,42 @@ export class Fleet extends EventEmitter {
 
   get ties(): Tie[] {
     return this.config.ties;
+  }
+
+  get links(): Link[] {
+    return this.config.links;
+  }
+
+  /**
+   * Change the wiring: take some cables out, then put some in, as one edit.
+   *
+   * Removing first is what lets one call re-plug an input. The result is
+   * checked as a whole and refused as a whole — half a re-cabling is a rig that
+   * matches neither the drawing before nor the one after.
+   */
+  editLinks(change: { add?: Link[]; remove?: string[] }): RouteResult {
+    const remove = new Set(change.remove ?? []);
+    const add = (change.add ?? []).map((link) => ({ from: String(link.from).trim(), to: String(link.to).trim() }));
+    const next = [...this.config.links.filter((link) => !remove.has(link.to)), ...add];
+
+    const devices = [...this.entries.values()].map((entry) => ({
+      id: entry.config.id,
+      name: entry.config.name,
+      matrix: entry.matrix,
+      locks: {},
+    }));
+    // Only the cables being added are checked against the devices' shapes. One
+    // already in the file that no longer matches — a router swapped for a
+    // smaller one — should not stop anybody fixing the rest.
+    const problem =
+      checkLinks(add, devices, this.config.devices.map((device) => device.id)) ??
+      duplicateInput(next);
+    if (problem) return { ok: false, reason: problem };
+
+    this.config.links = next;
+    this.emit('change');
+    this.emit('configChanged');
+    return { ok: true };
   }
 
   get salvos(): Salvo[] {
@@ -715,6 +844,30 @@ function validateDevice(device: DeviceConfig, others: DeviceConfig[]): string | 
     if (others.some((other) => other.videohubPort === device.videohubPort)) {
       return `videohub port ${device.videohubPort} is already used by another device`;
     }
+  }
+  return null;
+}
+
+/**
+ * How long a route through the wiring waits for one device to confirm before
+ * cutting the next one onto its cable. A Videohub answers in milliseconds and a
+ * switcher in a frame or two; this is the "something is wrong" line, not a delay.
+ */
+const ROUTE_CONFIRM_MS = 2000;
+
+/** What a route through the wiring did not get to, named. */
+function stopped(steps: Array<{ deviceId: string; destination: string }>, failedAt: number): string[] {
+  const rest = steps.slice(failedAt + 1);
+  if (rest.length === 0) return [];
+  return [`stopped before ${rest.map((step) => `${step.deviceId}/${step.destination}`).join(', ')}`];
+}
+
+/** One cable per input, across the whole list. */
+function duplicateInput(links: Link[]): string | null {
+  const seen = new Set<string>();
+  for (const link of links) {
+    if (seen.has(link.to)) return `${link.to} is already fed by a cable — remove that one first`;
+    seen.add(link.to);
   }
   return null;
 }
