@@ -122,6 +122,16 @@ span both. Locks on a Videohub are the router's own and shared with every other
 client on it. Details, and the **ties** that make an ATEM bus and a router
 output follow each other: **[docs/videohub.md](docs/videohub.md)**.
 
+**Wiring** (new in v0.4.0) is how the router and the switchers are cabled —
+router outputs into switcher inputs, switcher auxes back into the router —
+written down on its own page, because nothing on the network says so. Once it
+is, a cabled input says what it is really carrying, and **Route through** takes
+a router input straight to a switcher bus, or a switcher output through the
+router to a screen: it plans the crosspoints, names everything else they would
+change, and sends them upstream first, stopping at the first refusal. Only run
+against the simulated fleet so far. See the
+**[user guide](docs/USER-GUIDE.md#wiring-and-routing-through-the-router)**.
+
 ## Capture a switcher before you lose it
 
 ```bash
@@ -360,7 +370,7 @@ protocol on it, and `@av/atem-matrix` has no I/O in it at all.
   against the published specification, a TCP client, and an ATEM's own Videohub
   server, not a panel. A real Videohub *as a device* has: a Smart Videohub 12G
   40x40, through a live show on 2026-10-04.
-- **Wiring and Route through** (newer than v0.3.4) have only run against the
+- **Wiring and Route through** (new in v0.4.0) have only run against the
   simulated fleet.
 - **No media server has driven the failover support.** It is written from
   disguise's and PIXERA's documentation, and tested against this repo's own

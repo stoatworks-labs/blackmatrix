@@ -3,9 +3,9 @@
 BlackMatrix is **a crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
 across the top, destinations down the side, one click to route.
 
-![The routing grid on the built-in mock fleet, with every source group expanded.](screenshots/routing-grid.png)
+![The routing grid on the built-in mock fleet, with Route through planning a router input onto a switcher input.](screenshots/routing-grid.png)
 
-*The routing grid on the built-in mock fleet, with every source group expanded. The switcher state is simulated; the hatched cells are the real availability masks refusing a route the hardware would not allow.*
+*The routing grid on the built-in mock fleet. The underlined inputs are cabled from the router, and each row says where its picture really starts; on the right, Route through has planned a router input onto a switcher input and named everything else it would change. The switcher state is simulated.*
 
 It also **pretends to be a Blackmagic Videohub**, so hardware router panels, Companion and
 Blackmagic's own software can drive the same crosspoints — and, for a redundant rig, so a **media
@@ -149,8 +149,12 @@ the REST API only.
 
 ## Wiring, and routing through the router
 
-*Newer than v0.3.4: in the [browser demo](https://blackmatrix-demo.stoatworks-labs.com) now, and in
-the next release. It has only met the simulated fleet.*
+*New in v0.4.0, and so far only run against the simulated fleet.*
+
+![The Wiring page on the built-in mock fleet: a run of four cables staged above the cables already drawn.](screenshots/wiring.png)
+
+*The Wiring page on the built-in mock fleet: a run of four cables staged in the form, above the
+eight already drawn from the router into a switcher, each saying what it is carrying.*
 
 When a Videohub feeds the switcher — router outputs cabled into switcher inputs, switcher auxes
 cabled back into router inputs — tell the app how it is cabled, on the **Wiring** page. Nothing on
@@ -184,6 +188,9 @@ Once it is written down:
 
 Route through ignores the Live/Preset switch: its plan on screen *is* the preset, and it re-plans
 as the rig moves. Undo puts it back, switcher first.
+
+On a phone, **Route through ›** is the first row of the destination list whenever there are
+cables, and the destination list and source picker show the same names in cyan.
 
 ---
 
