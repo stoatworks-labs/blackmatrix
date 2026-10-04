@@ -209,12 +209,18 @@ into one entry that steers toward adding it as a switcher.
 Verified against the **simulated fleet**, against a **real TCP client** driving the
 protocol, and — since 2026-08-21 — against a **real ATEM Mini Extreme ISO**, which
 *corrected* the availability gating rather than confirming it (see `docs/NOTES.md`).
-That is the only switcher this has ever met.
+
+On **2026-10-04 v0.3.4 ran a live show** with two devices — a real **Smart Videohub
+12G 40x40** and an **ATEM 4 M/E Constellation 4K** — and the author reports it
+proven working. So a **real Videohub as a device** is proven. That rig was neither
+captured nor probed: say the app routed it through a show, not that the
+Constellation's masks were settled against the hardware.
 
 Still unproven, and not to be described otherwise: a **real Videohub control panel**
-driving it, a **real Videohub as a device**, either mobile app on a physical phone,
-and every model in the simulator's list except the Mini Extreme ISO — those are
-declared shapes, corrected by documentation and by testers, never by hardware.
+driving it, either mobile app on a physical phone, **Wiring and Route through**
+(added after v0.3.4, so not in the app that ran the show), and every model in the
+simulator's list except those two switchers — declared shapes, corrected by
+documentation and by testers, never by hardware.
 
 The probe that met that switcher covered the **multiview windows only** — 80 tests
 across all 16. `--probe-aux` is opt-in and has not been run, so the aux-only bits

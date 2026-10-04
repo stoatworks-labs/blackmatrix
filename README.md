@@ -6,9 +6,10 @@
 > Videohub protocol, then **checked against a real ATEM Mini Extreme ISO**, which
 > corrected the routing rules rather than confirming them — the availability masks
 > were probed on the hardware and this app's matrix was served from it as a 29x39
-> router. What has **never** happened is a real Videohub control panel driving it,
-> and no real Videohub has ever been one of its devices. Prove it on your own kit
-> before it goes anywhere near a show.
+> router. On **2026-10-04 it ran a live show** (v0.3.4) with a real **Smart Videohub
+> 12G 40x40** as one of its devices, beside an **ATEM 4 M/E Constellation 4K**, and
+> held up. What has **never** happened is a real Videohub control panel driving it.
+> Prove it on your own kit before it goes anywhere near a show.
 
 A **crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
 across the top, destinations down the side, one click to route — that also
@@ -355,9 +356,12 @@ protocol on it, and `@av/atem-matrix` has no I/O in it at all.
 
 ## Known limits
 
-- **No real Videohub panel has driven it**, and no real Videohub has ever been
-  one of its devices — the protocol side is verified against the published
-  specification, a TCP client, and an ATEM's own Videohub server, not a panel.
+- **No real Videohub panel has driven it** — the emulation side is verified
+  against the published specification, a TCP client, and an ATEM's own Videohub
+  server, not a panel. A real Videohub *as a device* has: a Smart Videohub 12G
+  40x40, through a live show on 2026-10-04.
+- **Wiring and Route through** (newer than v0.3.4) have only run against the
+  simulated fleet.
 - **No media server has driven the failover support.** It is written from
   disguise's and PIXERA's documentation, and tested against this repo's own
   clients. The numbering is the first thing to check on real kit.

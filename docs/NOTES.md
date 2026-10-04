@@ -28,7 +28,8 @@ Distinct from [atem overseer](https://github.com/stoatworks-labs/atem-overseer/b
 **HARDWARE-VERIFIED against an ATEM Mini Extreme ISO on 2026-08-21** (it was at
 `192.168.1.14`, MAC OUI `7c:2e:0d`) — connected, captured, probed, and its matrix
 served over the Videohub emulation as a 29x39 router. Still **never driven by a
-real Videohub panel**, and no real Videohub has ever been a device.
+real Videohub panel**. (No real Videohub had been a device either — until the
+2026-10-04 live show at the end of these notes.)
 
 **Hardware findings, which corrected the code:**
 
@@ -340,9 +341,9 @@ though it does carry the support footer. See [about window](https://github.com/s
 Constellation 4K** (`192.168.10.240`) plus a **Smart Videohub 12G 40x40** (`192.168.10.150`)
 as a fleet device: router outputs 1–20 labelled "4 M/E Switcher In - 1..20", router inputs
 21–28 labelled "4 M/E Aux 1–6", "PGM - 4K", "PGM - M/E 2". That is the first time a real
-Videohub has been one of this app's devices that I have seen — connected, and its 40x40 labels
-and routing read correctly through a read-only `GET /api/fleet`. Nothing was routed or written
-from here: the show was live.
+Videohub has been one of this app's devices — and **Allan confirmed after the show that it was
+proven working**, on the installed v0.3.4. I only read it (a read-only `GET /api/fleet`: 40x40
+labels and routing correct); nothing was routed or written from here while the show was live.
 
 What got built, all against `--mock` only:
 

@@ -16,9 +16,11 @@ server can switch to its backup machine through it**.
 > ISO** — which *corrected* the routing rules rather than confirming them. The availability masks
 > were probed on that hardware, and this app's matrix was served from it as a 29×39 router.
 >
-> **What has never happened is a real Videohub control panel driving it**, and no real Videohub
-> has ever been one of its devices. Neither mobile app has run on a physical device. Prove it on
-> your own kit before it goes anywhere near a show.
+> On **2026-10-04 it ran a live show** with a real **Smart Videohub 12G 40x40** as one of its
+> devices, beside an **ATEM 4 M/E Constellation 4K**, and held up. **What has never happened is a
+> real Videohub control panel driving it**, and neither mobile app has run on a physical device.
+> Wiring and Route through are newer than that show and have only met the simulated fleet. Prove it
+> on your own kit before it goes anywhere near a show.
 >
 > This codebase was created with AI assistance, directed and reviewed by a human author.
 

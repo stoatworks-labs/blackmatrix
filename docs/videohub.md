@@ -119,6 +119,9 @@ and an unchanged status, which a media server never reads. All of it is in
 
 ## Driving a real Videohub
 
+Proven through a live show on 2026-10-04: a Smart Videohub 12G 40x40 as a device beside an ATEM
+4 M/E Constellation 4K, on v0.3.4.
+
 A Videohub in the config is a device in the fleet like any switcher:
 
 ```jsonc

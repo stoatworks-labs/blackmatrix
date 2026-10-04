@@ -27,7 +27,7 @@ Node/TS npm-workspaces monorepo (videohub lib + matrix lib + server + web).
 - Legality comes from the switcher's `sourceAvailability`/`meAvailability`, not model tables.
 - Locks are per IP, matching the Videohub spec. Refused route = ACK + unchanged status; NAK is for malformed.
 - The UI calls a lock a **claim** and crosshatches the row. On the wire an owner routes through its own lock; over HTTP it may not (`ownLockHolds`), or a claim stops nobody.
-- Verified against `--mock`, a raw TCP client, and one real ATEM Mini Extreme ISO (which corrected the rules) — no real panel, no real Videohub, no other switcher model.
+- Verified against `--mock`, a raw TCP client, one real ATEM Mini Extreme ISO (which corrected the rules), and a live show (2026-10-04, v0.3.4) with a real Smart Videohub 12G 40x40 and an ATEM 4 M/E Constellation 4K as its devices. No real panel yet. Wiring/Route through came after that show: mock-only.
 - Devices are `RoutableDevice`: ATEM (real/mock/replayed capture) or Videohub. A Videohub owns its own locks.
 - `npm run capture -- <address>` takes a capture off hardware; `"capture": "<file>"` replays it as a device.
 - Ties make one destination follow another across boxes, one level deep.
