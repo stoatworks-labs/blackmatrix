@@ -369,3 +369,10 @@ controls; destination rows and the source picker show the ripple name in cyan. C
 375x812 against `--mock`: plan, take (over TCP to the mock router), and Undo. The user guide
 does not mention the phone entry yet — add it when the guide's "newer than v0.3.4" line comes
 out at the next release, so the site guide and PDF are rebuilt once rather than twice.
+
+**2026-10-05 — released v0.4.0.** Wiring, Route through (desktop and phone), the ripple names,
+and the Videohub lock-push fix. Bumped the same 16 files as 0.3.4; screenshots retaken from the
+real app on the mock fleet with `stoatworks-backend/release/cdpshot.py` (SHOT_ACT drives the
+device pick and the Route through form — see the scratch `shots.sh` pattern: a `window.__set`
+native-setter helper, because React ignores a plain `.value =`). Guide, card thumbnail and page
+hero regenerated. Still mock-only for the new feature — the release notes say so.
