@@ -149,6 +149,9 @@ the REST API only.
 
 ## Wiring, and routing through the router
 
+*Newer than v0.3.4: in the [browser demo](https://blackmatrix-demo.stoatworks-labs.com) now, and in
+the next release. It has only met the simulated fleet.*
+
 When a Videohub feeds the switcher — router outputs cabled into switcher inputs, switcher auxes
 cabled back into router inputs — tell the app how it is cabled, on the **Wiring** page. Nothing on
 the network says so: the router knows it has an output called "Switcher In 3", the switcher knows it
