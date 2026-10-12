@@ -1,39 +1,38 @@
 # BlackMatrix
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. It was developed against a
-> built-in simulated switcher fleet (`--mock`) and a real TCP client speaking the
-> Videohub protocol, then **checked against a real ATEM Mini Extreme ISO**, which
-> corrected the routing rules rather than confirming them — the availability masks
-> were probed on the hardware and this app's matrix was served from it as a 29x39
-> router. On **2026-10-04 it ran a live show** (v0.3.4) with a real **Smart Videohub
-> 12G 40x40** as one of its devices, beside an **ATEM 4 M/E Constellation 4K**, and
-> held up. What has **never** happened is a real Videohub control panel driving it.
-> Prove it on your own kit before it goes anywhere near a show.
+> (Anthropic), directed and reviewed by a human author. I built it against a simulated
+> switcher fleet (`--mock`) and a real TCP client speaking the Videohub protocol, then
+> **checked it against a real ATEM Mini Extreme ISO**, which corrected the routing rules
+> rather than confirming them: the availability masks were probed on the hardware, and this
+> app's matrix was served from it as a 29x39 router. On **2026-10-04 it ran a live show**
+> (v0.3.4) with a real Smart Videohub 12G 40x40 as one of its devices, beside an ATEM 4 M/E
+> Constellation 4K, and held up. What has **never** happened is a real Videohub control panel
+> driving it. Prove it on your own kit before it goes anywhere near a show.
 
-A **crosspoint router matrix for a fleet of Blackmagic ATEM switchers** — sources
-across the top, destinations down the side, one click to route — that also
-**pretends to be a Blackmagic Videohub** so hardware router panels, Companion and
-Blackmagic's own software can drive the same crosspoints — and, for a redundant
-rig, so a **media server can switch to its backup machine through it**.
+A crosspoint router matrix for a fleet of Blackmagic ATEM switchers: sources across the
+top, destinations down the side, one click to route. It also pretends to be a Blackmagic
+Videohub, so hardware router panels, Companion and Blackmagic's own software can drive the
+same crosspoints, and on a redundant rig a media server can switch to its backup machine
+through it.
 
 [![Watch it running — 53 seconds](docs/video-thumb.png)](https://www.youtube.com/watch?v=A0YzfXbPcG0)
 
 *Fifty-three seconds, filmed against a released build and its simulated fleet. The
-failover at the end fires because the heartbeat genuinely stopped and the app's own
-state machine decided it had — the crosspoints move because a salvo was taken, not
-because a video was edited. Two of the switcher's cameras are renamed to stand in for
-the media servers; that is the only staging.*
+failover at the end fires because the heartbeat actually stopped and the app's own state
+machine noticed, and the crosspoints move because a salvo was taken, not because the video
+was edited. The only staging is that two of the switcher's cameras are renamed to stand in
+for the media servers.*
 
-**Click around it yourself: <https://blackmatrix-demo.stoatworks-labs.com>** — the
-real matrix in your browser, driving a simulated fleet you build from the device
-library. Every device there is invented in the tab: nothing is on a network and
-nothing is being controlled, because **a web page cannot reach a switcher at all**
-— the ATEM protocol is UDP and the Videohub protocol is raw TCP, and a browser can
-open neither. To route real hardware, run the app on the show network.
+You can click around it yourself at <https://blackmatrix-demo.stoatworks-labs.com>. That's
+the matrix itself in your browser, driving a simulated fleet you build from the device
+library. Every device there is made up inside the tab, so nothing's on a network and
+nothing's being controlled. **A web page can't reach a switcher at all**: the ATEM protocol
+is UDP, the Videohub protocol is raw TCP, and a browser can open neither. To route actual
+hardware, run the app on the show network.
 
-An ATEM has no single "router", so this treats every bus that takes one source at
-a time as a destination, grouped into sections:
+An ATEM doesn't have a single "router", so BlackMatrix treats every bus that takes one
+source at a time as a destination, grouped into sections:
 
 | Section | Destinations | Routed with |
 |---|---|---|
@@ -43,11 +42,11 @@ a time as a destination, grouped into sections:
 | **SuperSource** | Box 1..n, art fill, art key | `setSuperSourceBoxSettings` / `setSuperSourceProperties` |
 | **Multiview** | Every multiviewer window | `setMultiViewerWindowSource` |
 
-Which sources are legal on which destination is **read from the switcher**, not
-from a model table: every ATEM input reports a `sourceAvailability` mask (aux,
-multiviewer, SuperSource art, SuperSource box, key source) and a `meAvailability`
-mask. Illegal cells are drawn hatched and refused server-side — so an aux output
-cannot be routed back onto an aux bus, and ME 1's output cannot be routed onto ME 1.
+Which sources are legal on which destination comes from the switcher, not from a table of
+models: every ATEM input reports a `sourceAvailability` mask (aux, multiviewer, SuperSource
+art, SuperSource box, key source) and a `meAvailability` mask. Illegal cells are drawn
+hatched and the server refuses them, so you can't route an aux output back onto an aux bus,
+or ME 1's output onto ME 1.
 
 ## Quick start
 
@@ -56,12 +55,12 @@ npm install
 npm run dev:mock
 ```
 
-That serves <http://localhost:8533> with three simulated switchers of deliberately
-different shapes (1 M/E, 4 M/E, compact) and a Videohub server per switcher. No
-hardware, no network switchers, nothing to break.
+That serves <http://localhost:8533> with three simulated switchers, each a different shape
+on purpose (1 M/E, 4 M/E, compact), and a Videohub server for each one. There's no hardware
+and nothing on the network, so there's nothing to break.
 
-Against real switchers, write `blackmatrix.config.json` (see
-`config/blackmatrix.config.example.json`) and:
+For real switchers, write a `blackmatrix.config.json` (there's an example in
+`config/blackmatrix.config.example.json`) and run:
 
 ```bash
 npm run build && npm start
@@ -110,27 +109,26 @@ macOS builds are signed and notarised and open normally. The Windows builds are 
 
 ## Videohubs, not just switchers
 
-A real Blackmagic Videohub can be a device in the same fleet:
+A real Blackmagic Videohub can join the same fleet as a device:
 
 ```jsonc
 { "id": "hub", "name": "Machine room", "type": "videohub", "address": "192.168.1.60" }
 ```
 
-Its inputs become sources and its outputs become destinations in the same grid,
-so one screen covers the switchers and the router between them, and a salvo can
-span both. Locks on a Videohub are the router's own and shared with every other
-client on it. Details, and the **ties** that make an ATEM bus and a router
-output follow each other: **[docs/videohub.md](docs/videohub.md)**.
+Its inputs become sources and its outputs become destinations in the same grid, so one
+screen covers the switchers and the router between them, and a salvo can reach both. Locks
+on a Videohub belong to the router and are shared with every other client on it. The
+details, and the **ties** that make an ATEM bus and a router output follow each other, are
+in [docs/videohub.md](docs/videohub.md).
 
-**Wiring** (new in v0.4.0) is how the router and the switchers are cabled —
-router outputs into switcher inputs, switcher auxes back into the router —
-written down on its own page, because nothing on the network says so. Once it
-is, a cabled input says what it is really carrying, and **Route through** takes
-a router input straight to a switcher bus, or a switcher output through the
-router to a screen: it plans the crosspoints, names everything else they would
-change, and sends them upstream first, stopping at the first refusal. Only run
-against the simulated fleet so far. See the
-**[user guide](docs/USER-GUIDE.md#wiring-and-routing-through-the-router)**.
+**Wiring** (new in v0.4.0) is where you write down how the router and the switchers are
+cabled (router outputs into switcher inputs, switcher auxes back into the router), because
+nothing on the network knows. Once you have, a cabled input tells you what it's actually
+carrying, and **Route through** takes a router input straight to a switcher bus, or a
+switcher output through the router to a screen. It plans the crosspoints, lists everything
+else they'd change, and sends them upstream first, stopping at the first refusal. So far
+it's only run against the simulated fleet. The
+[user guide](docs/USER-GUIDE.md#wiring-and-routing-through-the-router) has the rest.
 
 ## Capture a switcher before you lose it
 
@@ -138,41 +136,40 @@ against the simulated fleet so far. See the
 npm run capture -- 192.168.10.240 --name "Stage"
 ```
 
-The availability masks this whole project depends on exist only in the protocol
-— not in an ATEM autosave, not in any file a switcher leaves behind. A capture
-puts the real shape of a real switcher on disk, and `"capture": "<file>"` on a
-device replays it with no hardware present. See
-**[docs/capture.md](docs/capture.md)**, including the opt-in probe that tests
-the masks against the hardware.
+The availability masks this whole project depends on only exist in the protocol. They're
+not in an ATEM autosave or in any other file a switcher leaves behind, so when the switcher
+goes back on the van, its shape goes with it. A capture puts a real switcher's shape on
+disk, and `"capture": "<file>"` on a device replays it with no hardware present. See
+[docs/capture.md](docs/capture.md), which also covers the opt-in probe that tests the masks
+against the hardware.
 
 ## Adding devices
 
-The **Devices** page (top right) is where switchers and routers are added, edited,
-reconnected and removed, with no config file and no restart. **Scan network**
-sweeps the local /24s for both kinds — a switcher answers on UDP 9910, a router
-on TCP 9990, and neither answers the other's probe — and offers what it finds.
+The **Devices** page (top right) is where you add, edit, reconnect and remove switchers and
+routers, without a config file or a restart. **Scan network** sweeps the local /24s for both
+kinds and offers what it finds. A switcher answers on UDP 9910, a router on TCP 9990, and
+neither answers the other's probe.
 
-Ports for the Videohub emulation are assigned from `basePort` upward and written
-back to the config, so they stay put when devices are added or removed. A panel
-is configured against a port number; that number is a fact about the device, not
-about where it sits in a list.
+Ports for the Videohub emulation are handed out from `basePort` upward and written back to
+the config, so they stay put when devices come and go. A panel is set up against a port
+number, and that number belongs to the device, not to wherever it happens to sit in a list.
 
-A device id cannot be changed once made — salvos, ties and label overrides are
-all keyed on it. Removing a device leaves salvos and ties that reference it
-alone rather than rewriting them, and says which ones: an operator who pulls a
-switcher out for an hour should get their salvos back when it returns.
+You can't change a device id once it's made, because salvos, ties and label overrides are
+all keyed on it. Removing a device leaves the salvos and ties that mention it alone rather
+than rewriting them, and tells you which ones. If you pull a switcher out for an hour, you
+should get your salvos back when it returns.
 
 ## On a phone
 
-The web UI is responsive: below 800px the grid is replaced by an X-Y panel —
-a destination list showing what each is taking, then the sources that
-destination will accept. Not a smaller grid, because a grid does not shrink;
-this is what a hardware panel does for the same reason. **Preset is the default
-at that width**, so a mis-tap stages instead of cutting.
+The web UI is responsive. Below 800px the grid turns into an X-Y panel: a list of
+destinations showing what each one's taking, then the sources that destination will accept.
+You don't get a smaller grid, because a grid doesn't shrink, and hardware panels work this
+way for the same reason. **Preset is the default at that width**, so a stray thumb stages a
+route instead of cutting it.
 
-That works in any phone browser pointed at the server. There is also a native
-iOS app in `mobile/`, which adds the one thing a browser cannot do — **finding
-the server without typing an address**:
+That works in any phone browser pointed at the server. There's also a native iOS app in
+`mobile/`, which adds the one thing a browser can't do: **finding the server without typing
+an address**.
 
 ```bash
 cd mobile
@@ -181,20 +178,20 @@ npm run ios:init      # once, generates the Xcode project
 npm run ios:build     # or: npx tauri ios build --debug --target aarch64-sim
 ```
 
-It is a shell, deliberately: it sweeps the local /24s for BlackMatrix servers,
-remembers the ones you use, and then shows the server's own UI. It does not
-speak the ATEM or Videohub protocols — a phone has no business holding a
-switcher connection open while the OS suspends it, and the panel emulation needs
-a listening socket. Both stay on the server.
+It's only a shell, on purpose. It sweeps the local /24s for BlackMatrix servers, remembers
+the ones you use, and then shows the server's own UI. It doesn't speak the ATEM or Videohub
+protocols: a phone has no business holding a switcher connection open while the OS suspends
+it, and the panel emulation needs a listening socket. Both of those stay on the server.
 
-Android builds too (`npm run android:init`, then `npm run android:build`). It
-needs `ANDROID_HOME`, `NDK_HOME` and a `JAVA_HOME` pointing at **JDK 21** —
-Gradle cannot use JDK 25, and says so only as a bare `> 25.0.4`.
+Android builds too (`npm run android:init`, then `npm run android:build`). It needs
+`ANDROID_HOME`, `NDK_HOME` and a `JAVA_HOME` pointing at **JDK 21**. Gradle can't use JDK
+25, and the only way it tells you is a bare `> 25.0.4`, which is about as helpful as Gradle
+gets.
 
-Neither mobile app has run on a physical device: that needs an iOS development
-profile and an Android release key, both of which are credentials rather than
-code. **[docs/signing.md](docs/signing.md)** has the steps, and the build wiring
-for both is already in place.
+Neither mobile app has run on a physical device yet. That needs an iOS development profile
+and an Android release key, which are credentials rather than code.
+[docs/signing.md](docs/signing.md) has the steps, and the build wiring for both is already
+in place.
 
 ## The hosted simulator
 
@@ -203,19 +200,17 @@ npm run sim          # locally, on :5183
 npm run sim:build    # static build in packages/web/dist-sim
 ```
 
-A build of the same UI that simulates its devices **in the browser tab**, with a
-model list covering the ATEM and Videohub ranges. It is a demo and says so on
-every screen: nothing is on a network, nothing is being controlled, and no web
-page can reach this hardware — the ATEM protocol is UDP, the Videohub protocol
-is raw TCP, and the emulation this app offers panels has to *listen* on a port.
-A browser can do none of those things.
+This is a build of the same UI that simulates its devices in the browser tab, with a model
+list covering the ATEM and Videohub ranges. It's a demo and says so on every screen. Nothing's
+on a network and nothing's being controlled, because no web page can reach this hardware:
+the ATEM protocol is UDP, the Videohub protocol is raw TCP, and the emulation this app offers
+panels has to *listen* on a port. A browser can't do any of those.
 
-It is not a reimplementation. The simulator builds a real `AtemState` and runs it
-through the same matrix model, the same legality rules and the same grid as the
-live app, so what it shows is what the app would show. What it cannot be is
-*accurate about a model*: the names are Blackmagic's, and only the entries marked
-as read off hardware carry real numbers. Everything else is an approximate shape
-for that class of device, and a capture replaces it with the truth.
+The simulator doesn't reimplement anything. It builds a real `AtemState` and runs it through
+the same matrix model, legality rules and grid as the live app, so what it shows is what the
+app would show. What it can't be is *accurate about a model*. The names are Blackmagic's, but
+only the entries marked as read off hardware carry real numbers. Everything else is a rough
+shape for that class of device, and a capture replaces it with the truth.
 
 ## Configuration
 
@@ -233,81 +228,77 @@ for that class of device, and a capture replaces it with the truth.
 ```
 
 Each switcher gets its own Videohub server: the first on `basePort`, the next on
-`basePort + 1`, unless you set `videohubPort`. **If something else on the host
-already listens on 9990** — Bitfocus Companion's Videohub panel surface does —
-the affected switcher logs the clash, starts without it, and everything else
-keeps working. Give it another port.
+`basePort + 1`, and so on, unless you set `videohubPort`. **If something else on the host is
+already listening on 9990** (Bitfocus Companion's Videohub panel surface does), the switcher
+affected logs the clash and starts without it, and everything else carries on. Give it
+another port.
 
 ## Controlling it from a router panel
 
 Point any Videohub client at `<host>:<port for that switcher>`:
 
-- **Bitfocus Companion** — the `blackmagic-videohub` module.
+- **Bitfocus Companion**, with the `blackmagic-videohub` module.
 - **A Smart Videohub / Universal Videohub hardware panel**, or Blackmagic's
   Videohub Control software.
 - **Anything else** that speaks [the Videohub Ethernet Protocol](docs/videohub.md).
 
-Input numbers are the switcher's sources in ATEM source-id order; output numbers
-are the destinations in the section order of the table above. Both orderings are
-stable for a given switcher, so a panel's buttons keep meaning the same thing.
+Input numbers are the switcher's sources in ATEM source-id order, and output numbers are the
+destinations in the section order of the table above. Both orders stay the same for a given
+switcher, so a panel's buttons keep meaning the same thing.
 
-Full mapping, what is and is not implemented, and a worked telnet session:
-**[docs/videohub.md](docs/videohub.md)**.
+The full mapping, what is and isn't implemented, and a worked telnet session are in
+[docs/videohub.md](docs/videohub.md).
 
 ## Claims
 
-A destination can be claimed — the flag on its row in the browser, or a lock
-from a panel; they are the same thing, and `docs/videohub.md` calls it what the
-wire calls it. Claims are held **per IP address**, which is how a real Videohub
-does it, so a second panel on the same machine shares one and everyone else is
-refused. Shift-click the flag (or send `F` on the wire) to force one open.
+A destination can be claimed, either with the flag on its row in the browser or with a lock
+from a panel. They're the same thing, and `docs/videohub.md` calls it a lock because that's
+what the wire calls it. Claims are held **per IP address**, the way a real Videohub does it,
+so a second panel on the same machine shares one and everyone else is refused. Shift-click
+the flag (or send `F` on the wire) to force one open.
 
-It is enforced in one place, so a claim made from a panel refuses a route made
-from the browser, and the other way round.
+It's all enforced in one place, so a claim made from a panel refuses a route made from the
+browser, and the other way round.
 
-**In the app it is a claim, and a claim stops you too.** The flag on each row
-claims that destination: the row crosshatches, its crosspoints stop taking
-clicks, it cannot be staged into a take, and the flag is how you release it.
-That includes the person who made the claim — on the wire an owner may route
-through its own lock, which is the spec and what panels get, but the browser and
-the phone app *are* that owner, so a rule that only stopped other clients would
-stop nobody who could see the button.
+**In the app it's a claim, and a claim stops you too.** The flag on each row claims that
+destination: the row crosshatches, its crosspoints stop taking clicks, it can't be staged
+into a take, and the flag is how you release it. That includes whoever made the claim. On
+the wire an owner can route through its own lock, which is the spec and what panels get, but
+the browser and the phone app *are* that owner, so a rule that only stopped other clients
+wouldn't stop anyone who could see the button.
 
 ## Salvos
 
-A salvo is a named set of crosspoints **across the whole fleet** — one press sets
-them all. Build one in the UI by capturing what destinations are currently taking
-(`Build new`, then `+` on each row you want), or write them into the config file.
+A salvo is a named set of crosspoints across the whole fleet, and one press sets them all.
+Build one in the UI by capturing what destinations are taking right now (`Build new`, then
+`+` on each row you want), or write them into the config file.
 
-Every crosspoint in a salvo is attempted; the ones the switcher will not accept
-come back named rather than silently dropped. Salvos are this app's own idea —
-they are not part of the Videohub Ethernet Protocol — so they exist in the UI and
-the REST API only.
+Every crosspoint in a salvo gets tried, and any the switcher won't accept come back named
+rather than vanishing without a word. Salvos are this app's own idea and aren't part of the
+Videohub Ethernet Protocol, so they only exist in the UI and the REST API.
 
 ## Redundant systems
 
-A redundant media server rig is two machines playing the same show and a router
-downstream deciding which one reaches the screens. This can be that router, in
-either of the two shapes the industry uses.
+A redundant media server rig is two machines playing the same show, and a router downstream
+deciding which one gets to the screens. BlackMatrix can be that router, in either of the two
+shapes the industry uses.
 
-**The media server drives it.** disguise's understudy sends matrix routing
-itself the moment it takes over a failed machine, and PIXERA fires a control
-action at a matrix switcher from its `System Lost` trigger. Both can point at
-the Videohub emulation — disguise has a Blackmagic Smart Videohub driver, and
-PIXERA can send anything over TCP. Because an ATEM re-syncs its inputs, the main
-and backup feeds do not have to be genlocked to each other for a clean cut,
-which an SDI router does require.
+**The media server drives it.** disguise's understudy sends the matrix routing itself the
+moment it takes over from a failed machine, and PIXERA fires a control action at a matrix
+switcher from its `System Lost` trigger. Both can point at the Videohub emulation: disguise
+has a Blackmagic Smart Videohub driver, and PIXERA will send anything over TCP. Because an
+ATEM re-syncs its inputs, the main and backup feeds don't need to be genlocked to each other
+for a clean cut, which an SDI router does need.
 
-**Or this app decides.** A **failover watch** polls a machine — a TCP port, a
-URL, or a heartbeat it must be sent — and fires a salvo when it stops answering.
-It will not fire before it has seen the machine working once, it starts
-disarmed, it fires once, and it does not switch back unless you say what "back"
-means. What it fires is an ordinary salvo, so the failover can be rehearsed by
-pressing Take on it.
+**Or this app decides.** A **failover watch** polls a machine (a TCP port, a URL, or a
+heartbeat that has to keep arriving) and fires a salvo when it stops answering. It won't
+fire until it's seen the machine working once, it starts disarmed, it only fires once, and it
+doesn't switch back unless you tell it what "back" means. What it fires is an ordinary
+salvo, so you can rehearse the failover by pressing Take on it.
 
-**And a plain line protocol** on TCP and UDP (`ascii.enabled`, port 9995) for
-anything that can send a string but not speak Videohub — disguise's generic
-Telnet Matrix, PIXERA's TCP module, 7thSense, a show controller:
+**And a plain line protocol** on TCP and UDP (`ascii.enabled`, port 9995) for anything that
+can send a string but can't speak Videohub, such as disguise's generic Telnet Matrix,
+PIXERA's TCP module, 7thSense or a show controller:
 
 ```
 ROUTE 2 1          route output 2 to input 1
@@ -317,14 +308,13 @@ SALVO backup       fire a salvo by name
 FAILOVER main      fire a watch's lost salvo
 ```
 
-One lock trap is worth knowing before you rely on any of it: a refused route is
-answered with `ACK` and an unchanged status, as the Videohub spec requires,
-which means **a media server cannot see a refusal**. A locked destination is a
-failover that silently does not happen. `videohub.failoverClients` names the
-addresses whose routes walk through locks.
+There's one trap with locks worth knowing before you rely on any of this. A refused route
+gets an `ACK` and an unchanged status, because the Videohub spec says so, which means **a
+media server can't see a refusal**. A locked destination is a failover that silently doesn't
+happen. `videohub.failoverClients` lists the addresses whose routes walk through locks.
 
 All of it, including how to fill in disguise's and PIXERA's fields, is in
-**[docs/failover.md](docs/failover.md)**.
+[docs/failover.md](docs/failover.md).
 
 ## REST API
 
@@ -346,8 +336,8 @@ All of it, including how to fill in disguise's and PIXERA's fields, is in
 
 The browser gets the same state pushed over `ws://<host>:8533/ws`.
 
-Renaming a **source** renames the input on the switcher itself. Renaming a
-**destination** is local to this app — the ATEM has no name for "Aux 2".
+Renaming a **source** renames the input on the switcher itself. Renaming a **destination**
+only changes it in this app, because the ATEM doesn't have a name for "Aux 2".
 
 ## Layout
 
@@ -360,33 +350,32 @@ packages/
   web        @blackmatrix/web     The grid.
 ```
 
-The three libraries are portable on purpose: `@av/videohub` will put a Videohub
-front end on anything with crosspoints, `@av/ascii-matrix` will put a line
-protocol on it, and `@av/atem-matrix` has no I/O in it at all.
+The three libraries are portable on purpose: `@av/videohub` will put a Videohub front end on
+anything with crosspoints, `@av/ascii-matrix` will put a line protocol on it, and
+`@av/atem-matrix` has no I/O in it at all.
 
 ## Known limits
 
-- **No real Videohub panel has driven it** — the emulation side is verified
-  against the published specification, a TCP client, and an ATEM's own Videohub
-  server, not a panel. A real Videohub *as a device* has: a Smart Videohub 12G
-  40x40, through a live show on 2026-10-04.
+- **No real Videohub panel has driven it.** The emulation side is verified against the
+  published specification, a TCP client and an ATEM's own Videohub server, but not a panel.
+  A real Videohub *as a device* has been through it: a Smart Videohub 12G 40x40, through a
+  live show on 2026-10-04.
 - **Wiring and Route through** (new in v0.4.0) have only run against the
   simulated fleet.
-- **No media server has driven the failover support.** It is written from
-  disguise's and PIXERA's documentation, and tested against this repo's own
-  clients. The numbering is the first thing to check on real kit.
-- The first two **multiview windows** are program and preview on most switchers,
-  which usually means the switcher ignores a route sent to them. Those rows are
-  marked, not hidden.
-- **Media player still/clip selection is deliberately not a destination.** It
-  takes from the media pool, not from the video sources, so it does not belong in
-  a matrix whose columns are sources.
-- The failover probes answer "is that machine there", not "is it playing the
-  right thing" — a TCP handshake, an HTTP answer, or a heartbeat. Knowing whether
-  a media server's output is *correct* means speaking its protocol, which is a
-  much larger promise than this makes.
-- Streaming and recording follow program and are not routable, so they are absent.
+- **No media server has driven the failover support.** It's written from disguise's and
+  PIXERA's documentation, and tested against this repo's own clients. The numbering is the
+  first thing to check on real kit.
+- The first two **multiview windows** are program and preview on most switchers, so the
+  switcher usually ignores a route sent to them. Those rows are marked rather than hidden.
+- **Media player still/clip selection isn't a destination, on purpose.** It takes from the
+  media pool rather than the video sources, so it doesn't belong in a matrix whose columns
+  are sources.
+- The failover probes (a TCP handshake, an HTTP answer or a heartbeat) answer "is that
+  machine there?", not "is it playing the right thing?". Knowing whether a media server's
+  output is *correct* means speaking its protocol, which is a much bigger promise than this
+  one makes.
+- Streaming and recording follow program and can't be routed, so they're not in the grid.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
