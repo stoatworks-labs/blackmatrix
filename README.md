@@ -365,8 +365,10 @@ anything with crosspoints, `@av/ascii-matrix` will put a line protocol on it, an
 - **No media server has driven the failover support.** It's written from disguise's and
   PIXERA's documentation, and tested against this repo's own clients. The numbering is the
   first thing to check on real kit.
-- The first two **multiview windows** are program and preview on most switchers, so the
-  switcher usually ignores a route sent to them. Those rows are marked rather than hidden.
+- The first two **multiview windows** aren't fixed to program and preview, whatever the
+  received wisdom says: on the Mini Extreme ISO both took every source their masks allowed,
+  so they're ordinary rows. Only the multiview windows were probed on that switcher, though.
+  The aux buses' availability bits have never been checked against what an aux output did.
 - **Media player still/clip selection isn't a destination, on purpose.** It takes from the
   media pool rather than the video sources, so it doesn't belong in a matrix whose columns
   are sources.

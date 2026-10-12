@@ -13,14 +13,15 @@ Download an installer from
 > Nothing needs to be installed — no Node, no separate checkout. Just download
 > and run.
 
-> **Unsigned builds.** By default the installers are unsigned. On macOS,
-> right-click the app → **Open** → **Open** once; on Windows, "More info" →
-> "Run anyway". See [SIGNING.md](SIGNING.md) to produce signed macOS builds.
+> **Signing.** Released macOS builds are signed and notarised, so they open
+> normally. The Windows installer is unsigned: "More info" → "Run anyway" once.
+> A copy you build yourself is unsigned; [SIGNING.md](SIGNING.md) covers what
+> that means on macOS.
 
 ## What it does
 
-- Lists bindable network interfaces + a port field (defaults to 4700).
-- **Start/Stop** the embedded Overseer server.
+- Lists bindable network interfaces + a port field (defaults to 8533).
+- **Start/Stop** the embedded BlackMatrix server.
 - **Open** the dashboard in your browser.
 - Lives in the system tray; the panel themes itself to BlackMatrix's palette
   (carried in `src-tauri/launcher.toml`).
