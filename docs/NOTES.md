@@ -376,3 +376,10 @@ real app on the mock fleet with `stoatworks-backend/release/cdpshot.py` (SHOT_AC
 device pick and the Route through form — see the scratch `shots.sh` pattern: a `window.__set`
 native-setter helper, because React ignores a plain `.value =`). Guide, card thumbnail and page
 hero regenerated. Still mock-only for the new feature — the release notes say so.
+
+**2026-10-18 — released v0.4.1.** No code change: proxy-addr 2.0.8 (GHSA-jqcg-44mw-7w3h,
+critical, runtime — but `trust proxy` is never set, so `req.ip` is the socket address and the
+spoof was unreachable; it still names claim owners, so it shipped) and source-map-js 1.2.2
+(dev-only), plus the 10-12 docs rewrite. Bumped the same 16 files as 0.4.0 (`cargo update -w
+--offline` for the launcher's Cargo.lock). Guide PDF rebuilt only for its footer version — the
+footer reads the website's `projects.json`, so that is set to the new tag first.
