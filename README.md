@@ -70,15 +70,15 @@ npm run build && npm start
 
 ## Download
 
-**[v0.4.1](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.4.1)** — prebuilt for macOS, Windows and Linux. Pick your platform:
+**[v0.4.2](https://github.com/stoatworks-labs/blackmatrix/releases/tag/v0.4.2)** — prebuilt for macOS, Windows and Linux. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`blackmatrix-0.4.1-macos-universal.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.1/blackmatrix-0.4.1-macos-universal.dmg) | 89 MB |
-| Universal (Apple Silicon + Intel) · .pkg installer | [`blackmatrix-0.4.1-macos-universal.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.1/blackmatrix-0.4.1-macos-universal.pkg) | 89 MB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`blackmatrix-0.4.2-macos-universal.dmg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.2/blackmatrix-0.4.2-macos-universal.dmg) | 89 MB |
+| Universal (Apple Silicon + Intel) · .pkg installer | [`blackmatrix-0.4.2-macos-universal.pkg`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.2/blackmatrix-0.4.2-macos-universal.pkg) | 89 MB |
 
 </details>
 
@@ -87,7 +87,7 @@ npm run build && npm start
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`BlackMatrix_0.4.1_x64-setup.exe`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.1/BlackMatrix_0.4.1_x64-setup.exe) | 30 MB |
+| x64 · .exe installer | [`BlackMatrix_0.4.2_x64-setup.exe`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.2/BlackMatrix_0.4.2_x64-setup.exe) | 30 MB |
 
 </details>
 
@@ -96,8 +96,8 @@ npm run build && npm start
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .deb package (Debian/Ubuntu) | [`BlackMatrix_0.4.1_amd64.deb`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.1/BlackMatrix_0.4.1_amd64.deb) | 57 MB |
-| x64 · .rpm package (Fedora/RHEL) | [`BlackMatrix-0.4.1-1.x86_64.rpm`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.1/BlackMatrix-0.4.1-1.x86_64.rpm) | 57 MB |
+| x64 · .deb package (Debian/Ubuntu) | [`BlackMatrix_0.4.2_amd64.deb`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.2/BlackMatrix_0.4.2_amd64.deb) | 57 MB |
+| x64 · .rpm package (Fedora/RHEL) | [`BlackMatrix-0.4.2-1.x86_64.rpm`](https://github.com/stoatworks-labs/blackmatrix/releases/download/v0.4.2/BlackMatrix-0.4.2-1.x86_64.rpm) | 57 MB |
 
 </details>
 
