@@ -383,3 +383,10 @@ spoof was unreachable; it still names claim owners, so it shipped) and source-ma
 (dev-only), plus the 10-12 docs rewrite. Bumped the same 16 files as 0.4.0 (`cargo update -w
 --offline` for the launcher's Cargo.lock). Guide PDF rebuilt only for its footer version — the
 footer reads the website's `projects.json`, so that is set to the new tag first.
+
+**2026-10-25 — released v0.4.2.** No code change: body-parser 2.4.0 (GHSA-27r3-jxmh-p828, high,
+runtime: trailing bytes after a compressed request body could hold the server up; every API body
+goes through `express.json()`) with the qs 6.16.1 it asks for, plus the dev-only moves since
+0.4.1 (vite 6.4.5 in packages/web, vitest 4.1.12 for the @vitest/mocker advisories). Bumped the
+same 16 files as 0.4.1. Docker `:latest` already had the fix from main; the release is for the
+desktop installers, whose launcher esbuilds the server into the bundle.
