@@ -16,6 +16,9 @@ Videohub, so hardware router panels, Companion and Blackmagic's own software can
 same crosspoints, and on a redundant rig a media server can switch to its backup machine
 through it.
 
+The [project page](https://stoatworks-labs.com/software/blackmatrix/) has the downloads, the
+user guide and the video.
+
 [![Watch it running — 53 seconds](docs/video-thumb.png)](https://www.youtube.com/watch?v=A0YzfXbPcG0)
 
 *Fifty-three seconds, filmed against a released build and its simulated fleet. The

@@ -187,7 +187,9 @@ export function App() {
           <span className="demo-why">
             the ATEM protocol is UDP and the Videohub protocol is raw TCP, neither of which a browser can open
           </span>
-          . To route real hardware, run the app on the show network.
+          . To route real hardware, run the app on the show network. The{' '}
+          <a href="https://stoatworks-labs.com/software/blackmatrix/">project page</a> has the downloads and the
+          user guide.
         </div>
       ) : null}
 

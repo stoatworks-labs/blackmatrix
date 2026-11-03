@@ -1,0 +1,13 @@
+# BlackMatrix demo
+
+> An ATEM fleet as one router, with failover
+
+A crosspoint router matrix over a fleet of Blackmagic ATEM switchers: sources across the top, destinations down the side, one click to route. It also serves the Videohub Ethernet Protocol, one server per switcher, so hardware router panels, Companion and a media server's own matrix driver all get at the same crosspoints. On a redundant rig it watches the main media server and fires a salvo when it stops answering.
+
+This address is a demo of the app, running in the browser against a simulated fleet you build from the device library. Every device is made up inside the tab, so nothing is on a network and nothing is being controlled. A web page can't reach a switcher at all: the ATEM protocol is UDP and the Videohub protocol is raw TCP, and a browser can open neither. To route real hardware, run the app on the show network.
+
+## Links
+
+- [Project page](https://stoatworks-labs.com/software/blackmatrix/): downloads, the user guide and a video
+- [User guide](https://stoatworks-labs.com/software/blackmatrix/guide/)
+- [Source on GitHub](https://github.com/stoatworks-labs/blackmatrix) (MIT)

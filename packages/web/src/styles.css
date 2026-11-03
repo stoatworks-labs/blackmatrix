@@ -570,6 +570,7 @@ main > .empty code { color: var(--routed); }
 }
 .demo-banner strong { color: var(--routed); text-transform: uppercase; letter-spacing: 0.06em; }
 .demo-why { color: #d8c49a; }
+.demo-banner a { color: inherit; }
 .mismatch {
   margin-left: 8px;
   padding: 1px 6px;
