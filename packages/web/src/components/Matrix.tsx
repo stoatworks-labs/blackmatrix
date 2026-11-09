@@ -147,6 +147,7 @@ export function Matrix({
           {device.name} is {device.connection}
         </h2>
         <p>No matrix until the switcher answers. Its address is {device.address}.</p>
+        {device.problem ? <p className="problem">{device.problem.message}</p> : null}
       </div>
     );
   }

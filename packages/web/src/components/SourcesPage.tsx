@@ -37,6 +37,7 @@ export function SourcesPage({ device, onSetPort, onRename }: SourcesPageProps) {
           {device.name} is {device.connection}
         </h2>
         <p>Its inputs are unknown until it answers.</p>
+        {device.problem ? <p className="problem">{device.problem.message}</p> : null}
       </div>
     );
   }

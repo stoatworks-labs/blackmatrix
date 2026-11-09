@@ -484,6 +484,9 @@ main > .empty code { color: var(--routed); }
 .device-model { color: var(--text); font-size: 11px; }
 .device-meta { color: var(--dim); font-size: 11px; }
 .device-meta code { color: var(--dim); }
+.device-problem { color: var(--routed); font-size: 11px; max-width: 60ch; }
+.empty .problem,
+.mobile-empty .problem { color: var(--routed); max-width: 60ch; margin-inline: auto; }
 .device-state { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 190px; }
 .device-actions { display: flex; gap: 5px; }
 

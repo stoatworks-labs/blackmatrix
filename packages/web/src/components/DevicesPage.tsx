@@ -143,6 +143,9 @@ export function DevicesPage({
                       {device.videohubPort ? `videohub :${device.videohubPort}` : 'no videohub port'}
                       {device.videohubClients > 0 ? ` · ${device.videohubClients} panel connected` : ''}
                     </span>
+                    {device.problem && device.connection !== 'connected' ? (
+                      <span className="device-problem">{device.problem.message}</span>
+                    ) : null}
                   </div>
                   <div className="device-state">
                     <span className={`pill ${device.connection}`}>{device.connection}</span>

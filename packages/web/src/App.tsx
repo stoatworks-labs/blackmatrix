@@ -12,7 +12,7 @@ import { MobileRouter } from './components/MobileRouter';
 import { useTakeState, type Crosspoint, type UndoEntry } from './takeState';
 import { claimedReason } from './claims';
 import { useSimulatorFleet } from './simulator/useSimulatorFleet';
-import type { Destination } from './types';
+import { PROBLEM_LABELS, type Destination } from './types';
 
 /**
  * Chosen at build time, so the simulator build contains no client for a server
@@ -207,11 +207,12 @@ export function App() {
               key={candidate.id}
               className={`device${candidate.id === device?.id ? ' active' : ''} ${candidate.connection}`}
               onClick={() => setSelectedId(candidate.id)}
-              title={`${candidate.model} at ${candidate.address}`}
+              title={`${candidate.model} at ${candidate.address}${candidate.problem ? ` — ${candidate.problem.message}` : ''}`}
             >
               <strong>{candidate.name}</strong>
               <span>
                 {candidate.connection}
+                {candidate.problem && candidate.connection !== 'connected' ? ` · ${PROBLEM_LABELS[candidate.problem.kind]}` : ''}
                 {candidate.videohubPort ? ` · videohub :${candidate.videohubPort}` : ''}
                 {candidate.videohubClients > 0 ? ` · ${candidate.videohubClients} panel` : ''}
               </span>

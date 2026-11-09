@@ -28,6 +28,19 @@ export type {
 export type { Endpoint, Link, PathStep, PlannedRoute, Trace } from '@av/atem-matrix';
 export { PORT_LABELS, portLabel } from '@av/atem-matrix';
 
+/** Mirrors the server's: why a device that should be connected is not. */
+export interface ConnectionProblem {
+  kind: 'refused' | 'no-answer' | 'unreachable';
+  message: string;
+}
+
+/** The few words a device list has room for. */
+export const PROBLEM_LABELS: Record<ConnectionProblem['kind'], string> = {
+  refused: 'refused',
+  'no-answer': 'no answer',
+  unreachable: 'unreachable',
+};
+
 export interface DeviceView {
   id: string;
   name: string;
@@ -35,6 +48,8 @@ export interface DeviceView {
   model: string;
   expectedModel?: string;
   connection: string;
+  /** Why it is not connecting, when the server can tell. Absent in the simulator. */
+  problem?: ConnectionProblem | null;
   videohubPort: number | null;
   videohubClients: number;
   matrix: MatrixModel | null;

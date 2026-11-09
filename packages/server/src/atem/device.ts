@@ -6,6 +6,19 @@ import type { LockAction } from '@av/videohub';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected';
 
 /**
+ * Why a device that is not connected is not connecting, when it can be told.
+ *
+ * Only a real ATEM says anything here, and only after it has been trying for a
+ * while: see `RefusalWatch`. `refused` is a switcher that answers and turns the
+ * session away, `no-answer` is an address where nothing speaks the protocol,
+ * `unreachable` is a network that won't carry the packet.
+ */
+export interface ConnectionProblem {
+  kind: 'refused' | 'no-answer' | 'unreachable';
+  message: string;
+}
+
+/**
  * One switcher, real or simulated. Emits `state` whenever its AtemState
  * changes and `connection` when it comes and goes.
  */
@@ -14,6 +27,8 @@ export interface DeviceRunner extends EventEmitter {
   readonly name: string;
   readonly address: string;
   readonly connection: ConnectionState;
+  /** Why it is not connecting, when known. Absent on anything simulated. */
+  readonly problem?: ConnectionProblem | null;
   readonly state: AtemState | null;
   /** The switcher's own product string once known, else the configured name. */
   readonly model: string;
@@ -54,6 +69,8 @@ export interface RoutableDevice extends EventEmitter {
   readonly address: string;
   readonly model: string;
   readonly connection: ConnectionState;
+  /** Why it is not connecting, when the device can tell. */
+  readonly problem?: ConnectionProblem | null;
 
   /** Null while disconnected, or before the device has said enough. */
   buildMatrix(): MatrixModel | null;
@@ -111,6 +128,9 @@ export class AtemRoutable extends EventEmitter implements RoutableDevice {
   }
   get connection(): ConnectionState {
     return this.runner.connection;
+  }
+  get problem(): ConnectionProblem | null {
+    return this.runner.problem ?? null;
   }
 
   buildMatrix(): MatrixModel | null {

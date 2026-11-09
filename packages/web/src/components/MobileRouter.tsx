@@ -80,12 +80,47 @@ export function MobileRouter({
     return map;
   }, [devices, links, device, matrix]);
 
-  if (!device || !matrix) {
+  if (!device) {
     return (
       <div className="mobile">
         <div className="mobile-empty">
           <h2>No device</h2>
           <p>Add a switcher or router on the Devices page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const devicePicker = (
+    <select
+      className="mobile-device"
+      value={device.id}
+      onChange={(event) => {
+        onSelectDevice(event.target.value);
+        setSelected(null);
+      }}
+      aria-label="Device"
+    >
+      {devices.map((candidate) => (
+        <option key={candidate.id} value={candidate.id}>
+          {candidate.name}
+        </option>
+      ))}
+    </select>
+  );
+
+  // A device that hasn't answered has no matrix yet. Say which one and why,
+  // and keep the picker: on a phone it is the only way to another device.
+  if (!matrix) {
+    return (
+      <div className="mobile">
+        <div className="mobile-bar">{devicePicker}</div>
+        <div className="mobile-empty">
+          <h2>
+            {device.name} is {device.connection}
+          </h2>
+          <p>No matrix until it answers. Its address is {device.address}.</p>
+          {device.problem ? <p className="problem">{device.problem.message}</p> : null}
         </div>
       </div>
     );
@@ -104,21 +139,7 @@ export function MobileRouter({
   return (
     <div className="mobile">
       <div className="mobile-bar">
-        <select
-          className="mobile-device"
-          value={device.id}
-          onChange={(event) => {
-            onSelectDevice(event.target.value);
-            setSelected(null);
-          }}
-          aria-label="Device"
-        >
-          {devices.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.name}
-            </option>
-          ))}
-        </select>
+        {devicePicker}
         <div className="mobile-mode" role="group" aria-label="Routing mode">
           <button type="button" className={mode === 'live' ? 'on live' : ''} onClick={() => onSetMode('live')}>
             Live

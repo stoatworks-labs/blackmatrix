@@ -268,6 +268,8 @@ only changes it in this app, because the ATEM doesn't have a name for "Aux 2".
 | --- | --- |
 | **A cell is hatched and refuses** | That route is illegal on this switcher, read from its own availability masks. |
 | **A route from a media server silently did not happen** | The destination is locked, and the protocol answers ACK either way. See the lock trap above. |
+| **A switcher says *disconnected · refused*** | It answered and turned the session away, most likely because all its client slots are taken. ATEM Software Control, Companion, Atem Overseer and every other copy of BlackMatrix each hold one. Close one and it connects on its own within a few seconds. |
+| **A switcher says *connecting · no answer*** | Nothing speaks the ATEM protocol at that address. The address is wrong, the switcher is off, or the device isn't an ATEM. |
 | **A switcher started with no Videohub server** | Port clash on 9990 — Companion's panel surface is the usual culprit. The log names it; give it another port. |
 | **A salvo lost its rows when I removed a device** | It did not — they are left in place deliberately, and named. |
 | **The simulator's model numbers look wrong** | Only entries marked as read off hardware carry real numbers. Everything else is an approximate shape; a capture replaces it with the truth. |

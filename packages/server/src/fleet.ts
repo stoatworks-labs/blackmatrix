@@ -9,7 +9,7 @@ import {
 } from '@av/videohub';
 import type { AppConfig, DeviceConfig, Link, Salvo, Tie } from './config.js';
 import { log } from './log.js';
-import { AtemRoutable, type RoutableDevice } from './atem/device.js';
+import { AtemRoutable, type ConnectionProblem, type RoutableDevice } from './atem/device.js';
 import { MockDevice } from './atem/mock.js';
 import { RealDevice } from './atem/realDevice.js';
 import { ReplayDevice } from './atem/replayDevice.js';
@@ -23,6 +23,8 @@ export interface DeviceView {
   /** What was chosen when it was added, when anything was. */
   expectedModel?: string;
   connection: string;
+  /** Why it is not connecting, when the device can tell. Null otherwise. */
+  problem: ConnectionProblem | null;
   videohubPort: number | null;
   videohubClients: number;
   matrix: MatrixModel | null;
@@ -385,6 +387,7 @@ export class Fleet extends EventEmitter {
         model: entry.runner.model,
         expectedModel: entry.config.expectedModel,
         connection: entry.runner.connection,
+        problem: entry.runner.problem ?? null,
         videohubPort: entry.videohub?.port ?? null,
         videohubClients: entry.videohub?.clientCount ?? 0,
         matrix: entry.matrix,

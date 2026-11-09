@@ -390,3 +390,18 @@ goes through `express.json()`) with the qs 6.16.1 it asks for, plus the dev-only
 0.4.1 (vite 6.4.5 in packages/web, vitest 4.1.12 for the @vitest/mocker advisories). Bumped the
 same 16 files as 0.4.1. Docker `:latest` already had the fix from main; the release is for the
 desktop installers, whose launcher esbuilds the server into the bundle.
+
+**2026-11-09 — a switcher that turns BlackMatrix away now says so.** A Mini Extreme ISO at
+`192.168.8.70` pinged fine but never connected. It answered the 20-byte hello with a SYN reply
+whose **byte 12 was 3** (a session it takes is 2) and then sent nothing, even after an ACK: no
+free client slot. The Mac alone held three (Atem Overseer, Companion's `atem` module, ATEM
+Software Control). **atem-connection 3.10.3, the latest, never reads byte 12**: any SYN reply sets
+it Established, the 5 s timeout fires `disconnected`, and it retries for ever, so the app said
+"disconnected" and nothing else. The library's socket runs in a worker thread, out of reach, so
+`atem/probe.ts` sends a hello of its own once a device has been trying for 7 s, then every 30 s
+while it stays stuck, and the reason rides on `DeviceView.problem` (`refused` / `no-answer` /
+`unreachable`) to the Devices page, the device bar, the empty grid and the phone. A hello the
+switcher *accepts* opens a session nobody uses and holds a slot until the switcher drops it, so
+after one of those it waits 5 minutes before asking again; a refused hello costs nothing. Seen
+live against the full switcher and an empty address before merging. The phone also stopped
+saying "No device" for a device that has no matrix yet.
